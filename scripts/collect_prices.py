@@ -7,6 +7,7 @@ GitHub Actions and degrades gracefully when one provider is unavailable.
 from __future__ import annotations
 
 import argparse
+import ast
 import html
 import json
 import math
@@ -123,15 +124,32 @@ def collect_estjt():
 
 
 def decode_navasan_payload(raw: str) -> str:
-    m = re.search(r"navasanret\((.*)\)\s*;?\s*$", raw, re.S)
-    if m:
-        arg = m.group(1).strip()
+    # The free widget calls navasanret(...) with a JS string. That string is
+    # itself JSON text, so some responses need two decoding passes.
+    m = re.search(r"navasanret\\((.*)\\)\\s*;?\\s*$", raw, re.S)
+    if not m:
+        return raw
+    arg = m.group(1).strip()
+
+    candidates = []
+    try:
+        candidates.append(json.loads(arg))
+    except Exception:
+        pass
+    try:
+        candidates.append(ast.literal_eval(arg))
+    except Exception:
+        pass
+
+    for decoded in candidates:
+        if not isinstance(decoded, str):
+            continue
         try:
-            decoded = json.loads(arg)
-            if isinstance(decoded, str):
-                return decoded
+            nested = json.loads(decoded)
+            if isinstance(nested, str):
+                return nested
         except Exception:
-            pass
+            return decoded
     return raw
 
 
@@ -143,7 +161,7 @@ def collect_navasan_widget():
         gold = extract_near(text, ["طلای 18 عیار", "طلای ۱۸ عیار", "18 عیار", "۱۸ عیار"], valid_gold)
         usd = extract_near(text, ["دلار آمریکا", "دلار", "USD"], valid_usd)
         if not valid_gold(gold) and not valid_usd(usd):
-            return source_result("نوسان", error="قیمت قابل استفاده در ویجت پیدا نشد | " + text[:280])
+            return source_result("نوسان", error="قیمت قابل استفاده در ویجت پیدا نشد")
         return source_result("نوسان", gold=gold, usd=usd)
     except Exception as e:
         return source_result("نوسان", error=f"{type(e).__name__}: {e}")
