@@ -155,13 +155,32 @@ def decode_navasan_payload(raw: str) -> str:
 
 def collect_navasan_widget():
     try:
+        # First try the lightweight, officially documented free widget endpoint.
         raw = fetch("https://www.navasan.tech/wp-navasan.php?usd&18ayar")
         payload = decode_navasan_payload(raw)
         text = strip_html(payload)
-        gold = extract_near(text, ["طلای 18 عیار", "طلای ۱۸ عیار", "18 عیار", "۱۸ عیار"], valid_gold)
+        gold = extract_near(
+            text,
+            ["یک گرم طلا 18 عیار", "یک گرم طلا ۱۸ عیار", "طلای 18 عیار", "طلای ۱۸ عیار", "18 عیار", "۱۸ عیار"],
+            valid_gold,
+        )
         usd = extract_near(text, ["دلار آمریکا", "دلار", "USD"], valid_usd)
+
+        # Some widget responses are heavily escaped. The public module/demo page
+        # contains the same free table and is a robust fallback.
+        if not valid_gold(gold) or not valid_usd(usd):
+            demo = strip_html(fetch("https://www.navasan.tech/module.php"))
+            if not valid_gold(gold):
+                gold = extract_near(
+                    demo,
+                    ["یک گرم طلا 18 عیار", "یک گرم طلا ۱۸ عیار", "طلای 18 عیار", "طلای ۱۸ عیار"],
+                    valid_gold,
+                )
+            if not valid_usd(usd):
+                usd = extract_near(demo, ["دلار آمریکا"], valid_usd)
+
         if not valid_gold(gold) and not valid_usd(usd):
-            return source_result("نوسان", error="قیمت قابل استفاده در ویجت پیدا نشد")
+            return source_result("نوسان", error="قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد")
         return source_result("نوسان", gold=gold, usd=usd)
     except Exception as e:
         return source_result("نوسان", error=f"{type(e).__name__}: {e}")
