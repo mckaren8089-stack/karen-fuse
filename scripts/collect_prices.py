@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 LATEST = DATA / "latest.json"
 HISTORY = DATA / "history.json"
-UA = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/124 Safari/537.36 KarenFuse/0.2"
+UA = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/124 Safari/537.36 KarenFuse/0.3"
 
 PERSIAN_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
 
@@ -57,12 +57,14 @@ def valid_usd(v) -> bool:
     return v is not None and 10_000 <= v <= 1_000_000
 
 
-def source_result(name: str, gold=None, usd=None, updated_at=None, error=None):
+def source_result(name: str, gold=None, usd=None, updated_at=None, error=None, usd_buy=None, usd_sell=None):
     return {
         "name": name,
-        "ok": bool((valid_gold(gold) or valid_usd(usd)) and not error),
+        "ok": bool((valid_gold(gold) or valid_usd(usd) or valid_usd(usd_buy) or valid_usd(usd_sell)) and not error),
         "gold18_toman": round(gold) if valid_gold(gold) else None,
         "usd_toman": round(usd) if valid_usd(usd) else None,
+        "usd_buy_toman": round(usd_buy) if valid_usd(usd_buy) else None,
+        "usd_sell_toman": round(usd_sell) if valid_usd(usd_sell) else None,
         "updated_at": updated_at or now_iso(),
         "error": error,
     }
@@ -151,6 +153,49 @@ def decode_navasan_payload(raw: str) -> str:
         except Exception:
             return decoded
     return raw
+
+
+def extract_values_after(text: str, label: str, validator, limit: int = 3, max_after: int = 180):
+    norm = text.translate(PERSIAN_DIGITS)
+    label_norm = label.translate(PERSIAN_DIGITS)
+    idx = norm.find(label_norm)
+    if idx < 0:
+        return []
+    window = norm[idx + len(label_norm): idx + len(label_norm) + max_after]
+    out = []
+    for token in re.findall(r"[0-9۰-۹][0-9۰-۹,٬.٫]{2,}", window):
+        n = parse_number(token)
+        if validator(n):
+            out.append(n)
+            if len(out) >= limit:
+                break
+    return out
+
+
+def collect_alanchand():
+    try:
+        text = strip_html(fetch("https://alanchand.com/"))
+        usd_values = extract_values_after(text, "دلار آمریکا", valid_usd, limit=2, max_after=120)
+        gold_values = extract_values_after(text, "گرم طلای 18 عیار", valid_gold, limit=1, max_after=160)
+        if not gold_values:
+            gold_values = extract_values_after(text, "گرم طلای ۱۸ عیار", valid_gold, limit=1, max_after=160)
+
+        usd_buy = usd_values[0] if len(usd_values) > 0 else None
+        usd_sell = usd_values[1] if len(usd_values) > 1 else None
+        usd_mid = None
+        if valid_usd(usd_buy) and valid_usd(usd_sell):
+            usd_mid = (usd_buy + usd_sell) / 2
+        elif valid_usd(usd_sell):
+            usd_mid = usd_sell
+        elif valid_usd(usd_buy):
+            usd_mid = usd_buy
+
+        gold = gold_values[0] if gold_values else None
+        if not valid_gold(gold) and not valid_usd(usd_mid):
+            return source_result("الان چند", error="قیمت قابل استفاده در صفحه عمومی پیدا نشد")
+        return source_result("الان چند", gold=gold, usd=usd_mid, usd_buy=usd_buy, usd_sell=usd_sell)
+    except Exception as e:
+        return source_result("الان چند", error=f"{type(e).__name__}: {e}")
 
 
 def collect_pashizi():
@@ -250,6 +295,7 @@ def write_json(path: Path, data):
 
 def collect():
     sources = {
+        "alanchand": collect_alanchand(),
         "tgju": collect_tgju(),
         "estjt": collect_estjt(),
         "pashizi": collect_pashizi(),
@@ -301,6 +347,9 @@ def self_test():
     sample = "اتحادیه طلا تهران طلا ۱۸ عیار ۲۴٫۴۲۴٫۱۰۰ سکه"
     assert extract_near(sample, ["طلا ۱۸ عیار"], valid_gold) == 24424100
     assert consensus([10, 12, 100]) == 12
+    sample_alanchand = "دلار آمریکا ۲۴۳,۰۵۰ ۲۴۵,۵۰۰ - گرم طلای 18 عیار ۲۴,۵۰۴,۸۲۰ تومان"
+    assert extract_values_after(sample_alanchand, "دلار آمریکا", valid_usd, limit=2) == [243050, 245500]
+    assert extract_values_after(sample_alanchand, "گرم طلای 18 عیار", valid_gold, limit=1) == [24504820]
     assert abs(spread_pct([100, 101]) - 0.995) < 0.001
     widget = 'navasanret("<table><tr><td>دلار آمریکا</td><td>۲۳۵,۳۰۰</td></tr><tr><td>طلای 18 عیار</td><td>۲۴,۴۲۴,۱۰۰</td></tr></table>")'
     text = strip_html(decode_navasan_payload(widget))
