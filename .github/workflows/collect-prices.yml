@@ -2,6 +2,11 @@ name: Collect market prices
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/collect_prices.py"
+      - ".github/workflows/collect-prices.yml"
   schedule:
     - cron: "7,37 * * * *"
 
