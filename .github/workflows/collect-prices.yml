@@ -28,6 +28,10 @@ jobs:
           python-version: "3.12"
       - name: Self-test collector
         run: python scripts/collect_prices.py --self-test
+      - name: Sync latest main before collection
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
       - name: Collect prices
         run: python scripts/collect_prices.py
       - name: Commit market data
@@ -40,5 +44,4 @@ jobs:
             exit 0
           fi
           git commit -m "data: update market snapshot"
-          git pull --rebase origin main
           git push
