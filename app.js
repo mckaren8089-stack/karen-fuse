@@ -134,8 +134,8 @@
     if(Number(m?.spread?.usd_pct)>1) els.usdSpread.className='warn-text'; else els.usdSpread.className='';
 
     const sources=m?.sources || {};
-    const labels={tgju:'TGJU',estjt:'اتحادیه طلا تهران',zarscan:'زر اسکن',geram18:'گرم ۱۸',navasan_widget:'نوسان'};
-    const preferred=['tgju','estjt','zarscan','geram18','navasan_widget'];
+    const labels={tgju:'TGJU',estjt:'اتحادیه طلا تهران',pashizi:'پشیزی',zarscan:'زر اسکن',geram18:'گرم ۱۸',navasan_widget:'نوسان'};
+    const preferred=['tgju','estjt','pashizi','zarscan','geram18','navasan_widget'];
     const order=[...preferred,...Object.keys(sources).filter(k=>!preferred.includes(k))];
     els.sourceGrid.innerHTML=order.filter(k=>sources[k]).map(k=>{
       const s=sources[k]||{};
