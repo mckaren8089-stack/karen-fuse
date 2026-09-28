@@ -153,6 +153,30 @@ def decode_navasan_payload(raw: str) -> str:
     return raw
 
 
+def collect_zarscan():
+    try:
+        text = strip_html(fetch("https://zarscan.ir/"))
+        gold = extract_near(text, ["طلای ۱۸ عیار", "طلای 18 عیار"], valid_gold)
+        usd = extract_near(text, ["دلار"], valid_usd)
+        if not valid_gold(gold) and not valid_usd(usd):
+            return source_result("زر اسکن", error="قیمت قابل استفاده در صفحه عمومی پیدا نشد")
+        return source_result("زر اسکن", gold=gold, usd=usd)
+    except Exception as e:
+        return source_result("زر اسکن", error=f"{type(e).__name__}: {e}")
+
+
+def collect_geram18():
+    try:
+        text = strip_html(fetch("https://geram18.ir/"))
+        gold = extract_near(text, ["طلای ۱۸ عیار", "طلای 18 عیار"], valid_gold)
+        usd = extract_near(text, ["دلار"], valid_usd)
+        if not valid_gold(gold) and not valid_usd(usd):
+            return source_result("گرم ۱۸", error="قیمت قابل استفاده در صفحه عمومی پیدا نشد")
+        return source_result("گرم ۱۸", gold=gold, usd=usd)
+    except Exception as e:
+        return source_result("گرم ۱۸", error=f"{type(e).__name__}: {e}")
+
+
 def collect_navasan_widget():
     try:
         # First try the lightweight, officially documented free widget endpoint.
@@ -215,6 +239,8 @@ def collect():
     sources = {
         "tgju": collect_tgju(),
         "estjt": collect_estjt(),
+        "zarscan": collect_zarscan(),
+        "geram18": collect_geram18(),
         "navasan_widget": collect_navasan_widget(),
     }
     golds = [s.get("gold18_toman") for s in sources.values() if s.get("ok")]
