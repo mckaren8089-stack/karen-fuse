@@ -1,29 +1,37 @@
 {
   "version": 1,
-  "generated_at": "2026-09-28T17:36:58Z",
+  "generated_at": "2026-09-28T17:38:15Z",
   "sources": {
     "tgju": {
       "name": "TGJU",
       "ok": true,
       "gold18_toman": 24401200,
       "usd_toman": 244800,
-      "updated_at": "2026-09-28 21:06:32",
+      "updated_at": "2026-09-28 21:08:07",
       "error": null
     },
     "estjt": {
       "name": "اتحادیه طلا تهران",
       "ok": true,
-      "gold18_toman": 24384800,
+      "gold18_toman": 24382500,
       "usd_toman": null,
-      "updated_at": "2026-09-28T17:36:56Z",
+      "updated_at": "2026-09-28T17:38:13Z",
       "error": null
+    },
+    "pashizi": {
+      "name": "پشیزی",
+      "ok": false,
+      "gold18_toman": null,
+      "usd_toman": null,
+      "updated_at": "2026-09-28T17:38:13Z",
+      "error": "HTTPError: HTTP Error 403: Forbidden"
     },
     "zarscan": {
       "name": "زر اسکن",
       "ok": false,
       "gold18_toman": null,
       "usd_toman": null,
-      "updated_at": "2026-09-28T17:36:57Z",
+      "updated_at": "2026-09-28T17:38:13Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "geram18": {
@@ -31,7 +39,7 @@
       "ok": false,
       "gold18_toman": null,
       "usd_toman": null,
-      "updated_at": "2026-09-28T17:36:57Z",
+      "updated_at": "2026-09-28T17:38:14Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "navasan_widget": {
@@ -39,16 +47,16 @@
       "ok": false,
       "gold18_toman": null,
       "usd_toman": null,
-      "updated_at": "2026-09-28T17:36:58Z",
+      "updated_at": "2026-09-28T17:38:15Z",
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
   },
   "consensus": {
-    "gold18_toman": 24393000,
+    "gold18_toman": 24391850,
     "usd_toman": 244800
   },
   "spread": {
-    "gold_pct": 0.0672,
+    "gold_pct": 0.0767,
     "usd_pct": 0.0
   }
 }
