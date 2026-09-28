@@ -137,13 +137,15 @@
     const labels={tgju:'TGJU',estjt:'اتحادیه طلا تهران',pashizi:'پشیزی',zarscan:'زر اسکن',geram18:'گرم ۱۸',navasan_widget:'نوسان'};
     const preferred=['tgju','estjt','pashizi','zarscan','geram18','navasan_widget'];
     const order=[...preferred,...Object.keys(sources).filter(k=>!preferred.includes(k))];
-    els.sourceGrid.innerHTML=order.filter(k=>sources[k]).map(k=>{
+    const active=order.filter(k=>sources[k]?.ok);
+    const failed=order.filter(k=>sources[k] && !sources[k].ok);
+    const cards=active.map(k=>{
       const s=sources[k]||{};
-      const ok=!!s.ok;
-      const cls=ok?'':'bad';
-      const note=ok ? `به‌روز: ${age(s.updated_at || m?.generated_at)}` : `خطا: ${escapeHtml(s.error || 'نامشخص')}`;
-      return `<article class="source-card ${cls}"><div class="name">${escapeHtml(labels[k]||k)}</div><div class="state">${note}</div><div class="values"><div><span>طلا ۱۸</span><strong>${money(s.gold18_toman)}</strong></div><div><span>دلار</span><strong>${money(s.usd_toman)}</strong></div></div></article>`;
-    }).join('') || '<div class="tiny">هنوز داده‌ای جمع‌آوری نشده است.</div>';
+      const note=`به‌روز: ${age(s.updated_at || m?.generated_at)}`;
+      return `<article class="source-card"><div class="name">${escapeHtml(labels[k]||k)}</div><div class="state">${note}</div><div class="values"><div><span>طلا ۱۸</span><strong>${money(s.gold18_toman)}</strong></div><div><span>دلار</span><strong>${money(s.usd_toman)}</strong></div></div></article>`;
+    }).join('');
+    const failedNote=failed.length ? `<div class="tiny">خارج از اجماع در این نوبت: ${failed.map(k=>escapeHtml(labels[k]||k)).join('، ')}</div>` : '';
+    els.sourceGrid.innerHTML=(cards || '<div class="tiny">هنوز داده‌ای جمع‌آوری نشده است.</div>') + failedNote;
   }
 
   function escapeHtml(s){ return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
