@@ -143,7 +143,7 @@ def collect_navasan_widget():
         gold = extract_near(text, ["طلای 18 عیار", "طلای ۱۸ عیار", "18 عیار", "۱۸ عیار"], valid_gold)
         usd = extract_near(text, ["دلار آمریکا", "دلار", "USD"], valid_usd)
         if not valid_gold(gold) and not valid_usd(usd):
-            return source_result("نوسان", error="قیمت قابل استفاده در ویجت پیدا نشد")
+            return source_result("نوسان", error="قیمت قابل استفاده در ویجت پیدا نشد | " + text[:280])
         return source_result("نوسان", gold=gold, usd=usd)
     except Exception as e:
         return source_result("نوسان", error=f"{type(e).__name__}: {e}")
