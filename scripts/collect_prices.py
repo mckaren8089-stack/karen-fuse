@@ -153,6 +153,19 @@ def decode_navasan_payload(raw: str) -> str:
     return raw
 
 
+def collect_pashizi():
+    try:
+        gold_text = strip_html(fetch("https://www.pashizi.com/fa/currency/gold_18k_gram"))
+        usd_text = strip_html(fetch("https://www.pashizi.com/fa/currency/usd"))
+        gold = extract_near(gold_text, ["طلا 18 عیار(گرم)", "طلا ۱۸ عیار", "طلای ۱۸ عیار"], valid_gold)
+        usd = extract_near(usd_text, ["دلار آمریکا"], valid_usd)
+        if not valid_gold(gold) and not valid_usd(usd):
+            return source_result("پشیزی", error="قیمت قابل استفاده در صفحات عمومی پیدا نشد")
+        return source_result("پشیزی", gold=gold, usd=usd)
+    except Exception as e:
+        return source_result("پشیزی", error=f"{type(e).__name__}: {e}")
+
+
 def collect_zarscan():
     try:
         text = strip_html(fetch("https://zarscan.ir/"))
@@ -239,6 +252,7 @@ def collect():
     sources = {
         "tgju": collect_tgju(),
         "estjt": collect_estjt(),
+        "pashizi": collect_pashizi(),
         "zarscan": collect_zarscan(),
         "geram18": collect_geram18(),
         "navasan_widget": collect_navasan_widget(),
