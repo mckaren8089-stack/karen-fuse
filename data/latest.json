@@ -1,7 +1,38 @@
 {
   "version": 1,
-  "generated_at": null,
-  "sources": {},
-  "consensus": {"gold18_toman": null, "usd_toman": null},
-  "spread": {"gold_pct": null, "usd_pct": null}
+  "generated_at": "2026-09-28T17:30:53Z",
+  "sources": {
+    "tgju": {
+      "name": "TGJU",
+      "ok": true,
+      "gold18_toman": 24401200,
+      "usd_toman": 244800,
+      "updated_at": "2026-09-28 21:00:47",
+      "error": null
+    },
+    "estjt": {
+      "name": "اتحادیه طلا تهران",
+      "ok": true,
+      "gold18_toman": 24366400,
+      "usd_toman": null,
+      "updated_at": "2026-09-28T17:30:52Z",
+      "error": null
+    },
+    "navasan_widget": {
+      "name": "نوسان",
+      "ok": false,
+      "gold18_toman": null,
+      "usd_toman": null,
+      "updated_at": "2026-09-28T17:30:53Z",
+      "error": "قیمت قابل استفاده در ویجت پیدا نشد"
+    }
+  },
+  "consensus": {
+    "gold18_toman": 24383800,
+    "usd_toman": 244800
+  },
+  "spread": {
+    "gold_pct": 0.1427,
+    "usd_pct": 0.0
+  }
 }
