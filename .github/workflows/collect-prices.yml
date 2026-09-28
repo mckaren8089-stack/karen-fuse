@@ -40,4 +40,5 @@ jobs:
             exit 0
           fi
           git commit -m "data: update market snapshot"
+          git pull --rebase origin main
           git push
