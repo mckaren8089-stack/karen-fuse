@@ -1,21 +1,28 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.2.0';
-  const STORE_KEY = 'karenFuse.v02';
+  const VERSION = '0.3.0';
+  const STORE_KEY = 'karenFuse.v03';
+  const LEGACY_KEYS = ['karenFuse.v02'];
   const RAW_BASE = 'https://raw.githubusercontent.com/mckaren8089-stack/karen-fuse/main/data';
+  const EXPECTED_DATA_SECONDS = 300;
+  const POLL_MS = 20_000;
+
   const nf = new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 0 });
   const pf = new Intl.NumberFormat('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const dtf = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'short', timeStyle: 'short' });
 
   const $ = id => document.getElementById(id);
-  const els = Object.fromEntries([
-    'netStatus','dataStatus','goldPrice','goldAge','goldSpread','usdPrice','usdAge','usdSpread','sourceGrid',
-    'refreshMarket','marketChart','chartAsset','chartWindow','chartSummary','calRef','calBuy','calSell','fillRef',
-    'saveCalibration','calibrationResult','sampleCount','estBluBuy','estBluSell','basisBuyLabel','basisSellLabel',
-    'basisChart','manualRef','setManualRef','clearManualRef','referenceMode','tradeCapital','feePct','dropPct',
-    'cashAfterSell','costToRebuy','netTradeProfit','netTradePct','historyBody','exportJson','importJson','clearData'
-  ].map(id => [id, $(id)]));
+  const ids = [
+    'netStatus','dataAge','goldPrice','goldMove','goldSpread','goldMin','goldMax','goldSpark',
+    'usdPrice','usdMove','usdBuy','usdSell','usdSourceNote','fuseRing','fuseMinutes','fuseState','fuseDetail',
+    'refreshMarket','sourceGrid','sourceFooter','chartTitle','marketChart','chartEmpty','rangeChange','rangeLow',
+    'rangeHigh','rangeCoverage','sampleCount','bluReferenceDisplay','referenceMode','calRef','calBuy','calSell',
+    'saveCalibration','calibrationResult','estBluBuy','estBluSell','basisBuyLabel','basisSellLabel','basisChart',
+    'manualRef','setManualRef','clearManualRef','tradeCapital','feePct','dropPct','cashAfterSell','costToRebuy',
+    'netTradeProfit','netTradePct','historyList','exportJson','importJson','clearData'
+  ];
+  const els = Object.fromEntries(ids.map(id => [id, $(id)]));
 
   const defaults = {
     version: VERSION,
@@ -27,8 +34,12 @@
   };
 
   let state = load();
-  let latest = null;
-  let history = [];
+  let latest = state.lastMarket || null;
+  let history = Array.isArray(state.marketHistory) ? state.marketHistory : [];
+  let chartAsset = 'gold';
+  let chartHours = 1;
+  let calRefTouched = false;
+  let refreshBusy = false;
 
   function clone(v){ return JSON.parse(JSON.stringify(v)); }
   function merge(target, src){
@@ -40,49 +51,68 @@
     return target;
   }
   function load(){
-    try { return merge(clone(defaults), JSON.parse(localStorage.getItem(STORE_KEY) || 'null') || {}); }
-    catch { return clone(defaults); }
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch {}
+    if(!raw){
+      for(const key of LEGACY_KEYS){
+        try {
+          const legacy = JSON.parse(localStorage.getItem(key) || 'null');
+          if(legacy){ raw = legacy; break; }
+        } catch {}
+      }
+    }
+    const s = merge(clone(defaults), raw || {});
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch {}
+    return s;
   }
-  function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+  function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {} }
+
   function num(v){
     if(v == null) return NaN;
     return Number(String(v).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٬,\s]/g,'').replace('٫','.'));
   }
-  function money(v){ return Number.isFinite(Number(v)) ? nf.format(Math.round(Number(v))) : '—'; }
+  function money(v){ return Number.isFinite(Number(v)) && Number(v)>0 ? nf.format(Math.round(Number(v))) : '—'; }
   function pct(v){ return Number.isFinite(Number(v)) ? pf.format(Number(v)) + '٪' : '—'; }
-  function age(ts){
-    if(!ts) return '—';
-    const ms = Date.now() - new Date(ts).getTime();
-    if(!Number.isFinite(ms)) return '—';
-    const sec = Math.max(0, Math.round(ms/1000));
-    if(sec < 60) return `${nf.format(sec)} ثانیه پیش`;
-    if(sec < 3600) return `${nf.format(Math.round(sec/60))} دقیقه پیش`;
-    if(sec < 86400) return `${nf.format(Math.round(sec/3600))} ساعت پیش`;
-    return `${nf.format(Math.round(sec/86400))} روز پیش`;
+  function ageSeconds(ts){
+    const t = new Date(ts || 0).getTime();
+    if(!Number.isFinite(t) || !t) return Infinity;
+    return Math.max(0,(Date.now()-t)/1000);
   }
+  function ageLabel(ts){
+    const s=ageSeconds(ts);
+    if(!Number.isFinite(s)) return '—';
+    if(s<60) return `${nf.format(Math.round(s))} ثانیه`;
+    if(s<3600) return `${nf.format(Math.round(s/60))} دقیقه`;
+    return `${nf.format(Math.round(s/3600))} ساعت`;
+  }
+  function signedPct(v){
+    if(!Number.isFinite(v)) return '—';
+    const sign=v>0?'+':'';
+    return sign + pf.format(v) + '٪';
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+
   function refPrice(){
-    if(Number.isFinite(Number(state.manualReference)) && Number(state.manualReference) > 0) return Number(state.manualReference);
-    return Number(latest?.consensus?.gold18_toman || state.lastMarket?.consensus?.gold18_toman || 0) || null;
+    if(Number(state.manualReference)>0) return Number(state.manualReference);
+    return Number(latest?.consensus?.gold18_toman || 0) || null;
   }
 
   function basisModel(){
-    const arr = state.calibrations.slice(-20);
-    if(!arr.length) return { buy:0, sell:0, count:0 };
-    let wb=0, ws=0, sum=0;
-    arr.forEach((r,i)=>{ const w=Math.pow(i+1,1.35); wb+=r.basisBuy*w; ws+=r.basisSell*w; sum+=w; });
-    return { buy:wb/sum, sell:ws/sum, count:arr.length };
+    const arr=state.calibrations.slice(-20);
+    if(!arr.length) return {buy:0,sell:0,count:0};
+    let wb=0,ws=0,sum=0;
+    arr.forEach((r,i)=>{ const w=Math.pow(i+1,1.35); wb+=Number(r.basisBuy||0)*w; ws+=Number(r.basisSell||0)*w; sum+=w; });
+    return {buy:wb/sum,sell:ws/sum,count:arr.length};
   }
 
   function estimates(){
-    const ref = refPrice();
-    const b = basisModel();
+    const ref=refPrice(), b=basisModel();
     if(!ref) return {ref:null,b,buy:null,sell:null};
     return {ref,b,buy:ref*(1+b.buy/100),sell:ref*(1+b.sell/100)};
   }
 
   function tradeCalc(){
-    const e=estimates();
-    const capital=num(els.tradeCapital.value), fee=num(els.feePct.value)/100, drop=num(els.dropPct.value)/100;
+    const e=estimates(), capital=num(els.tradeCapital.value), fee=num(els.feePct.value)/100, drop=num(els.dropPct.value)/100;
     if(!e.buy || !e.sell || !(capital>0) || !Number.isFinite(fee) || !Number.isFinite(drop)) return null;
     const grams=capital/e.sell;
     const cashAfterSell=capital*(1-fee);
@@ -100,143 +130,337 @@
   }
 
   async function refreshMarket(){
-    els.dataStatus.textContent='داده: در حال دریافت…';
+    if(refreshBusy) return;
+    refreshBusy=true;
+    if(els.refreshMarket) els.refreshMarket.textContent='…';
     try{
-      const [l,h]=await Promise.all([
-        fetchJson(`${RAW_BASE}/latest.json`),
-        fetchJson(`${RAW_BASE}/history.json`)
-      ]);
-      latest=l; history=Array.isArray(h?.points)?h.points:[];
-      state.lastMarket=l; state.marketHistory=history.slice(-3000); save();
-      els.dataStatus.textContent=`داده: ${age(l.generated_at)}`;
-      els.dataStatus.className='pill';
-      renderMarket(); render(); drawMarketChart();
+      const [l,h]=await Promise.all([fetchJson(`${RAW_BASE}/latest.json`),fetchJson(`${RAW_BASE}/history.json`)]);
+      latest=l;
+      history=Array.isArray(h?.points)?h.points:[];
+      state.lastMarket=l;
+      state.marketHistory=history.slice(-5000);
+      save();
     }catch(err){
       latest=state.lastMarket;
       history=Array.isArray(state.marketHistory)?state.marketHistory:[];
-      els.dataStatus.textContent='داده: ذخیرهٔ محلی';
-      els.dataStatus.className='pill muted';
-      renderMarket(); render(); drawMarketChart();
-      console.warn(err);
+      console.warn('market refresh failed',err);
+    }finally{
+      refreshBusy=false;
+      if(els.refreshMarket) els.refreshMarket.textContent='↻';
+      renderAll();
     }
   }
 
-  function renderMarket(){
-    const m=latest || state.lastMarket;
-    const gold=Number(m?.consensus?.gold18_toman), usd=Number(m?.consensus?.usd_toman);
-    els.goldPrice.textContent=gold>0?money(gold):'—';
-    els.usdPrice.textContent=usd>0?money(usd):'—';
-    els.goldAge.textContent=age(m?.generated_at);
-    els.usdAge.textContent=age(m?.generated_at);
-    els.goldSpread.textContent=`اختلاف منابع: ${pct(m?.spread?.gold_pct)}`;
-    els.usdSpread.textContent=`اختلاف منابع: ${pct(m?.spread?.usd_pct)}`;
-    if(Number(m?.spread?.gold_pct)>1) els.goldSpread.className='warn-text'; else els.goldSpread.className='';
-    if(Number(m?.spread?.usd_pct)>1) els.usdSpread.className='warn-text'; else els.usdSpread.className='';
-
-    const sources=m?.sources || {};
-    const labels={tgju:'TGJU',estjt:'اتحادیه طلا تهران',pashizi:'پشیزی',zarscan:'زر اسکن',geram18:'گرم ۱۸',navasan_widget:'نوسان'};
-    const preferred=['tgju','estjt','pashizi','zarscan','geram18','navasan_widget'];
-    const order=[...preferred,...Object.keys(sources).filter(k=>!preferred.includes(k))];
-    const active=order.filter(k=>sources[k]?.ok);
-    const failed=order.filter(k=>sources[k] && !sources[k].ok);
-    const cards=active.map(k=>{
-      const s=sources[k]||{};
-      const note=`به‌روز: ${age(s.updated_at || m?.generated_at)}`;
-      return `<article class="source-card"><div class="name">${escapeHtml(labels[k]||k)}</div><div class="state">${note}</div><div class="values"><div><span>طلا ۱۸</span><strong>${money(s.gold18_toman)}</strong></div><div><span>دلار</span><strong>${money(s.usd_toman)}</strong></div></div></article>`;
-    }).join('');
-    const failedNote=failed.length ? `<div class="tiny">خارج از اجماع در این نوبت: ${failed.map(k=>escapeHtml(labels[k]||k)).join('، ')}</div>` : '';
-    els.sourceGrid.innerHTML=(cards || '<div class="tiny">هنوز داده‌ای جمع‌آوری نشده است.</div>') + failedNote;
+  function sourceNumbers(asset){
+    const values=[];
+    Object.values(latest?.sources||{}).forEach(s=>{
+      if(!s?.ok) return;
+      const v=Number(asset==='gold'?s.gold18_toman:s.usd_toman);
+      if(v>0) values.push(v);
+    });
+    return values;
   }
 
-  function escapeHtml(s){ return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+  function pointValue(p,asset){ return Number(asset==='gold'?p.gold18_toman:p.usd_toman); }
+  function recentPoints(asset,hours=1){
+    const cutoff=Date.now()-hours*3600e3;
+    return history
+      .map(p=>({ts:new Date(p.ts).getTime(),v:pointValue(p,asset)}))
+      .filter(p=>p.ts>=cutoff && p.v>0)
+      .sort((a,b)=>a.ts-b.ts);
+  }
+  function moveFromHistory(asset){
+    const arr=recentPoints(asset,1);
+    if(arr.length<2) return NaN;
+    const prev=arr[arr.length-2].v, last=arr[arr.length-1].v;
+    return prev?((last/prev)-1)*100:NaN;
+  }
 
-  function render(){
-    const e=estimates();
-    const b=e.b;
+  function renderOverview(){
+    const gold=Number(latest?.consensus?.gold18_toman), usd=Number(latest?.consensus?.usd_toman);
+    els.goldPrice.textContent=money(gold);
+    els.usdPrice.textContent=money(usd);
+
+    const gm=moveFromHistory('gold'), um=moveFromHistory('usd');
+    setMove(els.goldMove,gm); setMove(els.usdMove,um);
+
+    const gvals=sourceNumbers('gold');
+    els.goldSpread.textContent=pct(latest?.spread?.gold_pct);
+    els.goldMin.textContent=gvals.length?money(Math.min(...gvals)):'—';
+    els.goldMax.textContent=gvals.length?money(Math.max(...gvals)):'—';
+
+    const alan=latest?.sources?.alanchand || {};
+    els.usdBuy.textContent=money(alan.usd_buy_toman);
+    els.usdSell.textContent=money(alan.usd_sell_toman);
+    els.usdSourceNote.textContent=alan.ok ? 'خرید/فروش: الان چند • عدد بزرگ: اجماع منابع' : 'عدد بزرگ: اجماع منابع';
+
+    const ts=latest?.generated_at;
+    els.dataAge.textContent=`${ageLabel(ts)} پیش`;
+    updateFuse(ts);
+    drawSpark(els.goldSpark,recentPoints('gold',1),'gold');
+  }
+
+  function setMove(el,v){
+    el.className='move-badge ' + (!Number.isFinite(v)?'neutral':v>0?'pos':v<0?'neg':'neutral');
+    el.textContent=Number.isFinite(v)?signedPct(v):'بدون تغییر';
+  }
+
+  function updateFuse(ts){
+    const sec=ageSeconds(ts);
+    const freshness=Math.max(0,Math.min(100,100-sec/EXPECTED_DATA_SECONDS*100));
+    els.fuseRing.style.setProperty('--fresh',freshness+'%');
+    els.fuseMinutes.textContent=sec<60?'<۱د':`${nf.format(Math.round(sec/60))}د`;
+    if(sec<=360){
+      els.fuseState.textContent='بازار تازه';
+      els.fuseState.className='pos';
+      els.fuseDetail.textContent='داده در چرخهٔ پنج‌دقیقه‌ای است';
+    }else if(sec<=900){
+      els.fuseState.textContent='کمی تأخیر';
+      els.fuseState.className='warn';
+      els.fuseDetail.textContent='اجرای بعدی گیت‌هاب در انتظار است';
+    }else{
+      els.fuseState.textContent='داده کهنه';
+      els.fuseState.className='neg';
+      els.fuseDetail.textContent='منابع یا جمع‌آورنده را بررسی کن';
+    }
+  }
+
+  function renderSources(){
+    const labels={alanchand:'الان چند',tgju:'TGJU',estjt:'اتحادیه تهران',pashizi:'پشیزی',zarscan:'زر اسکن',geram18:'گرم ۱۸',navasan_widget:'نوسان'};
+    const preferred=['alanchand','tgju','estjt','navasan_widget','pashizi','zarscan','geram18'];
+    const sources=latest?.sources||{};
+    const active=preferred.filter(k=>sources[k]?.ok);
+    const failed=preferred.filter(k=>sources[k] && !sources[k].ok);
+
+    els.sourceGrid.innerHTML=active.map(k=>{
+      const s=sources[k];
+      const usdDisplay=s.usd_sell_toman || s.usd_toman;
+      return `<article class="source-tile">
+        <div class="source-name"><strong>${escapeHtml(labels[k]||k)}</strong><i class="live-dot"></i></div>
+        <div class="source-values">
+          <div><span>طلا ۱۸</span><b>${money(s.gold18_toman)}</b></div>
+          <div><span>${s.usd_sell_toman?'دلار فروش':'دلار'}</span><b>${money(usdDisplay)}</b></div>
+        </div>
+      </article>`;
+    }).join('') || '<div class="source-footer">هیچ منبع سالمی در این نوبت در دسترس نیست.</div>';
+
+    const goldCount=Object.values(sources).filter(s=>s?.ok && Number(s.gold18_toman)>0).length;
+    const usdCount=Object.values(sources).filter(s=>s?.ok && Number(s.usd_toman)>0).length;
+    const failedNames=failed.map(k=>labels[k]||k);
+    els.sourceFooter.textContent=`مرجع طلا از ${nf.format(goldCount)} منبع و دلار از ${nf.format(usdCount)} منبع ساخته شده` +
+      (failedNames.length?` • خارج از اجماع: ${failedNames.join('، ')}`:'');
+  }
+
+  function historyCoverageHours(){
+    if(history.length<2) return 0;
+    const a=new Date(history[0].ts).getTime(), b=new Date(history[history.length-1].ts).getTime();
+    return Math.max(0,(b-a)/3600e3);
+  }
+
+  function updateRangeButtons(){
+    const coverage=historyCoverageHours();
+    document.querySelectorAll('.range-btn').forEach(btn=>{
+      const h=Number(btn.dataset.hours);
+      const enough = h===1 ? history.length>=2 : coverage >= Math.min(h*.72,h-0.25);
+      btn.disabled=!enough;
+      btn.title=enough?'':`هنوز ${nf.format(Math.max(1,Math.ceil(h-coverage)))} ساعت داده کم است`;
+      if(btn.classList.contains('active') && !enough){
+        btn.classList.remove('active');
+        const first=document.querySelector('.range-btn:not(:disabled)');
+        if(first){first.classList.add('active');chartHours=Number(first.dataset.hours);}
+      }
+    });
+  }
+
+  function drawMarketChart(){
+    updateRangeButtons();
+    const arr=recentPoints(chartAsset,chartHours);
+    const canvas=els.marketChart;
+    const {ctx,W,H}=prepareCanvas(canvas);
+    ctx.clearRect(0,0,W,H);
+    els.chartEmpty.hidden=arr.length>=2;
+
+    els.chartTitle.textContent=chartAsset==='gold'?'طلای ۱۸ عیار':'دلار آزاد';
+    if(arr.length<2){
+      els.rangeChange.textContent='—'; els.rangeLow.textContent='—'; els.rangeHigh.textContent='—';
+      els.rangeCoverage.textContent=history.length?formatCoverage(historyCoverageHours()):'۰ دقیقه';
+      return;
+    }
+
+    const vals=arr.map(p=>p.v), min0=Math.min(...vals), max0=Math.max(...vals);
+    const span=Math.max(1,max0-min0), min=min0-span*.18, max=max0+span*.18;
+    const pad={l:10,r:10,t:20,b:28};
+    const x=t=>pad.l+(t-arr[0].ts)*(W-pad.l-pad.r)/(arr[arr.length-1].ts-arr[0].ts||1);
+    const y=v=>H-pad.b-(v-min)*(H-pad.t-pad.b)/(max-min||1);
+
+    ctx.strokeStyle='rgba(119,151,181,.18)';ctx.lineWidth=1;
+    for(let i=0;i<4;i++){const yy=pad.t+i*(H-pad.t-pad.b)/3;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(W-pad.r,yy);ctx.stroke();}
+
+    const color=chartAsset==='gold'?'#f6c453':'#6bb6ff';
+    const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+    grad.addColorStop(0,chartAsset==='gold'?'rgba(246,196,83,.22)':'rgba(107,182,255,.22)');
+    grad.addColorStop(1,'rgba(0,0,0,0)');
+
+    ctx.beginPath();
+    arr.forEach((p,i)=>i?ctx.lineTo(x(p.ts),y(p.v)):ctx.moveTo(x(p.ts),y(p.v)));
+    ctx.lineTo(x(arr[arr.length-1].ts),H-pad.b);ctx.lineTo(x(arr[0].ts),H-pad.b);ctx.closePath();
+    ctx.fillStyle=grad;ctx.fill();
+
+    ctx.beginPath();
+    arr.forEach((p,i)=>i?ctx.lineTo(x(p.ts),y(p.v)):ctx.moveTo(x(p.ts),y(p.v)));
+    ctx.strokeStyle=color;ctx.lineWidth=2.4;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
+
+    const last=arr[arr.length-1];
+    ctx.beginPath();ctx.arc(x(last.ts),y(last.v),4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+
+    ctx.fillStyle='rgba(190,207,223,.7)';ctx.font='10px Tahoma';ctx.textAlign='left';
+    ctx.fillText(money(max0),pad.l+2,pad.t+2);
+    ctx.fillText(money(min0),pad.l+2,H-pad.b-5);
+
+    const change=(arr[arr.length-1].v/arr[0].v-1)*100;
+    els.rangeChange.textContent=signedPct(change);
+    els.rangeChange.className=change>0?'pos':change<0?'neg':'';
+    els.rangeLow.textContent=money(min0);
+    els.rangeHigh.textContent=money(max0);
+    els.rangeCoverage.textContent=formatCoverage((arr[arr.length-1].ts-arr[0].ts)/3600e3);
+  }
+
+  function formatCoverage(h){
+    if(h<1) return `${nf.format(Math.max(1,Math.round(h*60)))} دقیقه`;
+    if(h<24) return `${nf.format(Math.round(h*10)/10)} ساعت`;
+    return `${nf.format(Math.round(h/24*10)/10)} روز`;
+  }
+
+  function prepareCanvas(canvas){
+    const dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    const rect=canvas.getBoundingClientRect();
+    canvas.width=Math.max(1,Math.floor(rect.width*dpr)); canvas.height=Math.max(1,Math.floor(rect.height*dpr));
+    const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx,W:rect.width,H:rect.height};
+  }
+
+  function drawSpark(canvas,arr,asset){
+    const {ctx,W,H}=prepareCanvas(canvas);ctx.clearRect(0,0,W,H);
+    if(arr.length<2) return;
+    const vals=arr.map(p=>p.v),mn=Math.min(...vals),mx=Math.max(...vals),span=Math.max(1,mx-mn);
+    const x=i=>i*(W/(arr.length-1)), y=v=>H-6-(v-(mn-span*.1))*(H-12)/(span*1.2);
+    const color=asset==='gold'?'#f6c453':'#6bb6ff';
+    ctx.beginPath();arr.forEach((p,i)=>i?ctx.lineTo(x(i),y(p.v)):ctx.moveTo(x(i),y(p.v)));
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+  }
+
+  function autoFillCalibrationReference(){
+    const r=refPrice();
+    els.bluReferenceDisplay.textContent=r?money(r)+' تومان':'—';
+    els.referenceMode.textContent=state.manualReference?'دستی':'اجماع';
+    if(r && (!calRefTouched || !num(els.calRef.value))) els.calRef.value=Math.round(r);
+  }
+
+  function renderBlu(){
+    const e=estimates(), b=e.b;
     els.sampleCount.textContent=`${nf.format(state.calibrations.length)} نمونه`;
     els.estBluBuy.textContent=e.buy?money(e.buy):'—';
     els.estBluSell.textContent=e.sell?money(e.sell):'—';
     els.basisBuyLabel.textContent=pct(b.buy);
     els.basisSellLabel.textContent=pct(b.sell);
-    els.referenceMode.textContent=state.manualReference ? `مرجع محاسبات: دستی — ${money(state.manualReference)} تومان` : `مرجع محاسبات: اجماع بازار — ${money(e.ref)} تومان`;
-
-    const c=tradeCalc();
-    els.cashAfterSell.textContent=c?money(c.cashAfterSell)+' تومان':'—';
-    els.costToRebuy.textContent=c?money(c.costToRebuy)+' تومان':'—';
-    els.netTradeProfit.textContent=c?money(c.profit)+' تومان':'—';
-    els.netTradePct.textContent=c?pct(c.profitPct):'—';
-    els.netTradeProfit.className=c?(c.profit>=0?'pos':'neg'):'';
-    els.netTradePct.className=c?(c.profitPct>=0?'pos':'neg'):'';
+    autoFillCalibrationReference();
     renderBluHistory(); drawBasisChart();
   }
 
-  function renderBluHistory(){
-    const rows=state.calibrations.slice().reverse().slice(0,30);
-    if(!rows.length){els.historyBody.innerHTML='<tr><td colspan="6" class="empty">هنوز نمونه‌ای ثبت نشده است.</td></tr>';return;}
-    els.historyBody.innerHTML=rows.map(r=>`<tr><td>${dtf.format(new Date(r.at))}</td><td>${money(r.ref)}</td><td>${money(r.buy)}</td><td>${money(r.sell)}</td><td>${pct(r.basisBuy)}</td><td>${pct(r.basisSell)}</td></tr>`).join('');
-  }
-
-  function prepareCanvas(canvas){
-    const dpr=Math.max(1,window.devicePixelRatio||1); const rect=canvas.getBoundingClientRect();
-    canvas.width=Math.max(1,Math.floor(rect.width*dpr)); canvas.height=Math.max(1,Math.floor(rect.height*dpr));
-    const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,W:rect.width,H:rect.height};
-  }
-
   function drawBasisChart(){
-    const {ctx,W,H}=prepareCanvas(els.basisChart); ctx.clearRect(0,0,W,H);
+    const {ctx,W,H}=prepareCanvas(els.basisChart);ctx.clearRect(0,0,W,H);
     const arr=state.calibrations.slice(-30);
-    if(arr.length<2){ctx.fillStyle='#8294a8';ctx.font='12px Tahoma';ctx.textAlign='center';ctx.fillText('با ثبت چند نمونه، روند اختلاف بلو اینجا دیده می‌شود.',W/2,H/2);return;}
-    const vals=arr.flatMap(r=>[r.basisBuy,r.basisSell]); let min=Math.min(...vals),max=Math.max(...vals); if(min===max){min-=.25;max+=.25}
-    const pad=24, x=i=>pad+i*(W-pad*2)/(arr.length-1), y=v=>H-pad-(v-min)*(H-pad*2)/(max-min);
-    ctx.strokeStyle='#294158';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,y(0));ctx.lineTo(W-pad,y(0));ctx.stroke();
-    [[r=>r.basisBuy,'#f2c14e'],[r=>r.basisSell,'#3bd79f']].forEach(([get,color])=>{ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();arr.forEach((r,i)=>i?ctx.lineTo(x(i),y(get(r))):ctx.moveTo(x(i),y(get(r))));ctx.stroke();});
+    if(arr.length<2){ctx.fillStyle='#8095aa';ctx.font='11px Tahoma';ctx.textAlign='center';ctx.fillText('با چند نمونه، روند Basis اینجا شکل می‌گیرد.',W/2,H/2);return;}
+    const vals=arr.flatMap(r=>[Number(r.basisBuy),Number(r.basisSell)]),mn=Math.min(...vals),mx=Math.max(...vals),span=Math.max(.2,mx-mn);
+    const x=i=>8+i*(W-16)/(arr.length-1),y=v=>H-8-(v-(mn-span*.1))*(H-16)/(span*1.2);
+    [['#f6c453','basisBuy'],['#35d79d','basisSell']].forEach(([color,key])=>{
+      ctx.beginPath();arr.forEach((r,i)=>i?ctx.lineTo(x(i),y(Number(r[key]))):ctx.moveTo(x(i),y(Number(r[key]))));
+      ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+    });
   }
 
-  function drawMarketChart(){
-    const {ctx,W,H}=prepareCanvas(els.marketChart); ctx.clearRect(0,0,W,H);
-    const asset=els.chartAsset.value, hours=Number(els.chartWindow.value)||168, cutoff=Date.now()-hours*3600e3;
-    const arr=history.filter(p=>new Date(p.ts).getTime()>=cutoff).map(p=>({ts:new Date(p.ts).getTime(),v:Number(asset==='gold'?p.gold18_toman:p.usd_toman)})).filter(p=>p.ts&&p.v>0);
-    if(arr.length<2){ctx.fillStyle='#8294a8';ctx.font='12px Tahoma';ctx.textAlign='center';ctx.fillText('هنوز دادهٔ تاریخی کافی جمع نشده است.',W/2,H/2);els.chartSummary.textContent='—';return;}
-    const vals=arr.map(p=>p.v), min0=Math.min(...vals), max0=Math.max(...vals), span=Math.max(1,max0-min0), min=min0-span*.08, max=max0+span*.08;
-    const padL=12,padR=12,padT=18,padB=28; const x=t=>padL+(t-arr[0].ts)*(W-padL-padR)/(arr[arr.length-1].ts-arr[0].ts||1); const y=v=>H-padB-(v-min)*(H-padT-padB)/(max-min||1);
-    ctx.strokeStyle='#294158';ctx.lineWidth=1; for(let i=0;i<4;i++){const yy=padT+i*(H-padT-padB)/3;ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(W-padR,yy);ctx.stroke();}
-    ctx.strokeStyle=asset==='gold'?'#f2c14e':'#68adff';ctx.lineWidth=2.2;ctx.beginPath();arr.forEach((p,i)=>i?ctx.lineTo(x(p.ts),y(p.v)):ctx.moveTo(x(p.ts),y(p.v)));ctx.stroke();
-    ctx.fillStyle='#8294a8';ctx.font='11px Tahoma';ctx.textAlign='right';ctx.fillText(money(max0),W-padR,padT+2);ctx.fillText(money(min0),W-padR,H-padB-4);
-    const first=arr[0].v,last=arr[arr.length-1].v,change=(last/first-1)*100;
-    els.chartSummary.innerHTML=`<span>اول: ${money(first)}</span><span>آخر: ${money(last)}</span><span class="${change>=0?'pos':'neg'}">تغییر: ${pct(change)}</span><span>نقطه: ${nf.format(arr.length)}</span>`;
+  function renderBluHistory(){
+    const rows=state.calibrations.slice().reverse().slice(0,20);
+    els.historyList.innerHTML=rows.length?rows.map(r=>`<div class="history-item">
+      <span>${dtf.format(new Date(r.at))}</span>
+      <span>مرجع <b>${money(r.ref)}</b></span>
+      <span>خرید <b>${money(r.buy)}</b></span>
+      <span>فروش <b>${money(r.sell)}</b></span>
+    </div>`).join(''):'<div class="form-hint">هنوز نمونه‌ای ثبت نشده است.</div>';
+  }
+
+  function renderScenario(){
+    const c=tradeCalc();
+    els.cashAfterSell.textContent=c?money(c.cashAfterSell):'—';
+    els.costToRebuy.textContent=c?money(c.costToRebuy):'—';
+    els.netTradeProfit.textContent=c?money(c.profit):'—';
+    els.netTradePct.textContent=c?signedPct(c.profitPct):'—';
+    els.netTradeProfit.className=c?(c.profit>=0?'pos':'neg'):'';
+    els.netTradePct.className=c?(c.profitPct>=0?'pos':'neg'):'';
+  }
+
+  function renderAll(){
+    renderOverview();renderSources();drawMarketChart();renderBlu();renderScenario();
   }
 
   els.refreshMarket.addEventListener('click',refreshMarket);
-  els.chartAsset.addEventListener('change',drawMarketChart);
-  els.chartWindow.addEventListener('change',drawMarketChart);
-  window.addEventListener('resize',()=>{drawMarketChart();drawBasisChart();});
+  document.querySelectorAll('.asset-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('.asset-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    chartAsset=btn.dataset.asset;drawMarketChart();
+  }));
+  document.querySelectorAll('.range-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    if(btn.disabled)return;
+    document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    chartHours=Number(btn.dataset.hours);drawMarketChart();
+  }));
 
-  els.fillRef.addEventListener('click',()=>{const r=refPrice();if(r)els.calRef.value=Math.round(r);});
+  els.calRef.addEventListener('input',()=>{calRefTouched=true;});
   els.saveCalibration.addEventListener('click',()=>{
     const ref=num(els.calRef.value),buy=num(els.calBuy.value),sell=num(els.calSell.value);
-    if(!(ref>0&&buy>0&&sell>0)){els.calibrationResult.textContent='هر سه عدد مرجع، خرید بلو و فروش بلو را وارد کن.';return;}
+    if(!(ref>0&&buy>0&&sell>0)){els.calibrationResult.textContent='مرجع، خرید بلو و فروش بلو را کامل وارد کن.';return;}
     const row={at:Date.now(),ref,buy,sell,basisBuy:(buy/ref-1)*100,basisSell:(sell/ref-1)*100};
-    state.calibrations.push(row); if(state.calibrations.length>1000)state.calibrations=state.calibrations.slice(-1000); save();
-    els.calibrationResult.textContent=`ثبت شد — اختلاف خرید ${pct(row.basisBuy)} | اختلاف فروش ${pct(row.basisSell)}`;
-    els.calBuy.value='';els.calSell.value=''; render();
+    state.calibrations.push(row);
+    if(state.calibrations.length>1000) state.calibrations=state.calibrations.slice(-1000);
+    save();
+    els.calibrationResult.textContent=`ثبت شد • Basis خرید ${pct(row.basisBuy)} • فروش ${pct(row.basisSell)}`;
+    els.calBuy.value='';els.calSell.value='';calRefTouched=false;renderBlu();renderScenario();
   });
 
-  els.setManualRef.addEventListener('click',()=>{const v=num(els.manualRef.value);if(v>0){state.manualReference=Math.round(v);save();render();}});
-  els.clearManualRef.addEventListener('click',()=>{state.manualReference=null;els.manualRef.value='';save();render();});
+  els.setManualRef.addEventListener('click',()=>{
+    const v=num(els.manualRef.value);if(v>0){state.manualReference=Math.round(v);save();calRefTouched=false;renderBlu();renderScenario();}
+  });
+  els.clearManualRef.addEventListener('click',()=>{
+    state.manualReference=null;els.manualRef.value='';save();calRefTouched=false;renderBlu();renderScenario();
+  });
+
   ['tradeCapital','feePct','dropPct'].forEach(id=>els[id].addEventListener('input',()=>{
     if(id==='tradeCapital')state.settings.tradeCapital=num(els.tradeCapital.value)||0;
     if(id==='feePct')state.settings.feePct=num(els.feePct.value)||0;
     if(id==='dropPct')state.settings.dropPct=num(els.dropPct.value)||0;
-    save();render();
+    save();renderScenario();
   }));
 
-  function download(name,text,type){const b=new Blob([text],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+  function download(name,text,type){
+    const b=new Blob([text],{type}),a=document.createElement('a');
+    a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
   els.exportJson.addEventListener('click',()=>download(`karen-fuse-blu-${Date.now()}.json`,JSON.stringify({version:VERSION,calibrations:state.calibrations},null,2),'application/json'));
-  els.importJson.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const j=JSON.parse(await f.text());if(!Array.isArray(j.calibrations))throw new Error('bad');state.calibrations=j.calibrations.slice(-1000);save();render();}catch{alert('فایل معتبر نیست.')}});
-  els.clearData.addEventListener('click',()=>{if(confirm('نمونه‌های بلو پاک شوند؟')){state.calibrations=[];save();render();}});
+  els.importJson.addEventListener('change',async e=>{
+    const file=e.target.files?.[0];if(!file)return;
+    try{const j=JSON.parse(await file.text());if(!Array.isArray(j.calibrations))throw new Error('bad');state.calibrations=j.calibrations.slice(-1000);save();renderBlu();renderScenario();}
+    catch{alert('فایل معتبر نیست.');}
+  });
+  els.clearData.addEventListener('click',()=>{
+    if(confirm('همه نمونه‌های بلو پاک شوند؟')){state.calibrations=[];save();renderBlu();renderScenario();}
+  });
 
-  function updateNet(){els.netStatus.textContent=navigator.onLine?'آنلاین':'آفلاین';els.netStatus.className=navigator.onLine?'pill':'pill muted';}
-  window.addEventListener('online',()=>{updateNet();refreshMarket();});window.addEventListener('offline',updateNet);
+  function updateNet(){
+    els.netStatus.textContent=navigator.onLine?'آنلاین':'آفلاین';
+    els.netStatus.classList.toggle('neg',!navigator.onLine);
+  }
+  window.addEventListener('online',()=>{updateNet();refreshMarket();});
+  window.addEventListener('offline',updateNet);
+  window.addEventListener('resize',()=>{drawMarketChart();drawBasisChart();drawSpark(els.goldSpark,recentPoints('gold',1),'gold');});
 
   function hydrate(){
     els.tradeCapital.value=String(state.settings.tradeCapital||15000000);
@@ -245,7 +469,12 @@
     if(state.manualReference)els.manualRef.value=String(state.manualReference);
   }
 
-  hydrate();updateNet();renderMarket();render();refreshMarket();
-  setInterval(refreshMarket,60_000);
+  hydrate();
+  updateNet();
+  renderAll();
+  refreshMarket();
+  setInterval(refreshMarket,POLL_MS);
+  setInterval(()=>{ if(latest?.generated_at){ els.dataAge.textContent=`${ageLabel(latest.generated_at)} پیش`; updateFuse(latest.generated_at); } },10_000);
+
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
