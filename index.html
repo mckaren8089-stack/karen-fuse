@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#08111d" />
+  <meta name="description" content="Karen Fuse — پایش چندمنبعی طلای ۱۸ عیار و دلار، کالیبراسیون قیمت بلو و نمودار بازار" />
+  <title>Karen Fuse</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="brand-row"><span class="logo-dot"></span><h1>Karen Fuse</h1><span class="version">V0.2</span></div>
+      <p class="subtitle">طلای ۱۸ عیار، دلار و برآورد قیمت بلو — چندمنبعی و موبایل‌محور</p>
+    </div>
+    <div class="status-wrap">
+      <span id="netStatus" class="pill muted">در حال بررسی…</span>
+      <span id="dataStatus" class="pill muted">داده: —</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero-grid">
+      <article class="card hero-card">
+        <div class="eyebrow">طلای ۱۸ عیار — اجماع منابع</div>
+        <div id="goldPrice" class="big-number">—</div>
+        <div class="meta-row"><span>تومان / گرم</span><span id="goldAge">—</span></div>
+        <div class="source-line"><span id="goldSpread">اختلاف منابع: —</span></div>
+      </article>
+      <article class="card hero-card">
+        <div class="eyebrow">دلار آزاد — اجماع منابع</div>
+        <div id="usdPrice" class="big-number">—</div>
+        <div class="meta-row"><span>تومان</span><span id="usdAge">—</span></div>
+        <div class="source-line"><span id="usdSpread">اختلاف منابع: —</span></div>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><h2>منابع بازار</h2><p>هر منبع جدا نمایش داده می‌شود؛ عدد مرجع از میانهٔ منابع سالم محاسبه می‌شود.</p></div>
+        <button id="refreshMarket" class="ghost small">به‌روزرسانی</button>
+      </div>
+      <div id="sourceGrid" class="source-grid"></div>
+      <div class="tiny">اگر یک منبع قطع باشد، از بقیه استفاده می‌شود. اختلاف زیاد بین منابع به‌صورت هشدار نشان داده می‌شود.</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><h2>نمودار بازار</h2><p>تاریخچهٔ ذخیره‌شده توسط جمع‌آورندهٔ خودکار مخزن.</p></div>
+        <div class="toolbar">
+          <select id="chartAsset"><option value="gold">طلا ۱۸</option><option value="usd">دلار</option></select>
+          <select id="chartWindow"><option value="24">۲۴ ساعت</option><option value="72">۳ روز</option><option value="168" selected>۷ روز</option><option value="720">۳۰ روز</option></select>
+        </div>
+      </div>
+      <div class="chart-wrap tall"><canvas id="marketChart" width="1000" height="320"></canvas></div>
+      <div id="chartSummary" class="chart-summary">—</div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><h2>نمای زندهٔ TGJU</h2><p>ویجت رسمی برای کنترل چشمی لحظه‌ای؛ مستقل از محاسبات داخلی برنامه.</p></div>
+        <span class="pill muted">زنده</span>
+      </div>
+      <div class="tgju-shell"><iframe class="tgju-frame" src="tgju.html" title="TGJU live market" sandbox="allow-scripts"></iframe></div>
+    </section>
+
+    <section class="two-col">
+      <article class="card">
+        <div class="section-head"><div><h2>کالیبراسیون بلو</h2><p>وقتی قیمت واقعی بلو را می‌بینی، خرید و فروش را ثبت کن؛ برنامه اختلاف بلو با طلای مرجع را یاد می‌گیرد.</p></div></div>
+        <div class="form-grid">
+          <label>مرجع طلا (تومان/گرم)
+            <input id="calRef" inputmode="numeric" placeholder="از اجماع بازار پر می‌شود" />
+          </label>
+          <label>قیمت خرید بلو
+            <input id="calBuy" inputmode="numeric" placeholder="قیمت خرید نمایش‌داده‌شده در بلو" />
+          </label>
+          <label>قیمت فروش بلو
+            <input id="calSell" inputmode="numeric" placeholder="قیمت فروش نمایش‌داده‌شده در بلو" />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="fillRef" class="ghost">مرجع فعلی</button>
+          <button id="saveCalibration" class="primary">ثبت نمونه</button>
+        </div>
+        <div id="calibrationResult" class="result-box">هنوز نمونه‌ای ثبت نشده است.</div>
+      </article>
+
+      <article class="card estimate-card">
+        <div class="section-head"><div><h2>برآورد بلو</h2><p>بر پایهٔ نمونه‌های خودت؛ دادهٔ بلو به هیچ سروری ارسال نمی‌شود.</p></div><span id="sampleCount" class="pill">۰ نمونه</span></div>
+        <div class="calc-grid">
+          <div><span>خرید تخمینی بلو</span><strong id="estBluBuy">—</strong></div>
+          <div><span>فروش تخمینی بلو</span><strong id="estBluSell">—</strong></div>
+          <div><span>Basis خرید</span><strong id="basisBuyLabel">—</strong></div>
+          <div><span>Basis فروش</span><strong id="basisSellLabel">—</strong></div>
+        </div>
+        <div class="chart-wrap compact"><canvas id="basisChart" width="900" height="220"></canvas></div>
+      </article>
+    </section>
+
+    <section class="two-col">
+      <article class="card">
+        <div class="section-head"><div><h2>مرجع دستی اضطراری</h2><p>اگر منبع‌ها قطع شدند یا می‌خواهی با عدد مشخصی محاسبه کنی.</p></div></div>
+        <div class="inline-form">
+          <input id="manualRef" inputmode="numeric" placeholder="قیمت طلای ۱۸ عیار" />
+          <button id="setManualRef" class="ghost">ثبت مرجع دستی</button>
+          <button id="clearManualRef" class="ghost">بازگشت به اجماع</button>
+        </div>
+        <div id="referenceMode" class="tiny">مرجع محاسبات: اجماع بازار</div>
+      </article>
+
+      <article class="card">
+        <div class="section-head"><div><h2>فروش → بازخرید</h2><p>سناریوی ساده برای بررسی هزینه رفت‌وبرگشت.</p></div></div>
+        <div class="form-grid">
+          <label>مبلغ معامله (تومان)<input id="tradeCapital" inputmode="numeric" value="15000000" /></label>
+          <label>کارمزد هر سمت (%)<input id="feePct" inputmode="decimal" value="0.5" /></label>
+          <label>افت فرضی (%)<input id="dropPct" inputmode="decimal" value="2" /></label>
+        </div>
+        <div class="calc-grid">
+          <div><span>پول بعد از فروش</span><strong id="cashAfterSell">—</strong></div>
+          <div><span>هزینه بازخرید</span><strong id="costToRebuy">—</strong></div>
+          <div><span>سود/زیان خالص</span><strong id="netTradeProfit">—</strong></div>
+          <div><span>بازده خالص</span><strong id="netTradePct">—</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><h2>نمونه‌های بلو</h2><p>برای پشتیبان‌گیری یا انتقال بین گوشی‌ها خروجی بگیر.</p></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>زمان</th><th>مرجع</th><th>خرید بلو</th><th>فروش بلو</th><th>Basis خرید</th><th>Basis فروش</th></tr></thead>
+          <tbody id="historyBody"><tr><td colspan="6" class="empty">هنوز نمونه‌ای ثبت نشده است.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button id="exportJson" class="ghost">خروجی JSON</button>
+        <label class="file-label ghost">ورود JSON<input id="importJson" type="file" accept="application/json" hidden /></label>
+        <button id="clearData" class="ghost danger">پاک‌کردن نمونه‌ها</button>
+      </div>
+    </section>
+
+    <section class="card note-card">
+      <strong>وضعیت نسخه</strong>
+      <p>V0.2 دادهٔ بازار را از چند منبع مستقل جمع می‌کند، ولی قیمت بلو هنوز دستی کالیبره می‌شود. این ابزار برای پایش و محاسبه است و سفارش خرید/فروش انجام نمی‌دهد.</p>
+    </section>
+  </main>
+
+  <footer>Karen Fuse • V0.2 • داده‌های بلو فقط روی دستگاه شما</footer>
+  <script src="app.js"></script>
+</body>
+</html>
