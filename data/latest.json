@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-09-28T17:32:47Z",
+  "generated_at": "2026-09-28T17:33:44Z",
   "sources": {
     "tgju": {
       "name": "TGJU",
       "ok": true,
       "gold18_toman": 24401200,
       "usd_toman": 244800,
-      "updated_at": "2026-09-28 21:02:36",
+      "updated_at": "2026-09-28 21:03:32",
       "error": null
     },
     "estjt": {
@@ -15,7 +15,7 @@
       "ok": true,
       "gold18_toman": 24366400,
       "usd_toman": null,
-      "updated_at": "2026-09-28T17:32:47Z",
+      "updated_at": "2026-09-28T17:33:44Z",
       "error": null
     },
     "navasan_widget": {
@@ -23,8 +23,8 @@
       "ok": false,
       "gold18_toman": null,
       "usd_toman": null,
-      "updated_at": "2026-09-28T17:32:47Z",
-      "error": "قیمت قابل استفاده در ویجت پیدا نشد | navasanret('\\\" \\\\r\\\\n#navasan_table {\\\\r\\\\n border-collapse: collapse;\\\\r\\\\n width:100%;\\\\r\\\\n background-color: white;\\\\r\\\\n }\\\\r\\\\n#navasan_table .neg {\\\\r\\\\n color: #bd0a0a;\\\\r\\\\n}\\\\r\\\\n#navasan_table .pos {\\\\r\\\\n color: #1aa500;\\\\r\\\\n}\\\\r\\\\n#navasan_table .pos:before {\\\\r\\\\n "
+      "updated_at": "2026-09-28T17:33:44Z",
+      "error": "قیمت قابل استفاده در ویجت پیدا نشد"
     }
   },
   "consensus": {
