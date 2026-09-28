@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-09-28T17:34:39Z",
+  "generated_at": "2026-09-28T17:36:58Z",
   "sources": {
     "tgju": {
       "name": "TGJU",
       "ok": true,
       "gold18_toman": 24401200,
       "usd_toman": 244800,
-      "updated_at": "2026-09-28 21:04:31",
+      "updated_at": "2026-09-28 21:06:32",
       "error": null
     },
     "estjt": {
@@ -15,15 +15,31 @@
       "ok": true,
       "gold18_toman": 24384800,
       "usd_toman": null,
-      "updated_at": "2026-09-28T17:34:36Z",
+      "updated_at": "2026-09-28T17:36:56Z",
       "error": null
+    },
+    "zarscan": {
+      "name": "زر اسکن",
+      "ok": false,
+      "gold18_toman": null,
+      "usd_toman": null,
+      "updated_at": "2026-09-28T17:36:57Z",
+      "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
+    },
+    "geram18": {
+      "name": "گرم ۱۸",
+      "ok": false,
+      "gold18_toman": null,
+      "usd_toman": null,
+      "updated_at": "2026-09-28T17:36:57Z",
+      "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "navasan_widget": {
       "name": "نوسان",
       "ok": false,
       "gold18_toman": null,
       "usd_toman": null,
-      "updated_at": "2026-09-28T17:34:39Z",
+      "updated_at": "2026-09-28T17:36:58Z",
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
   },
