@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-29T17:29:09Z",
+  "generated_at": "2026-09-29T17:43:00Z",
   "sources": {
     "alanchand": {
       "name": "الان چند",
@@ -9,7 +9,7 @@
       "usd_toman": 252925,
       "usd_buy_toman": 251650,
       "usd_sell_toman": 254200,
-      "updated_at": "2026-09-29T17:28:59Z",
+      "updated_at": "2026-09-29T17:42:51Z",
       "error": null
     },
     "tgju": {
@@ -19,17 +19,17 @@
       "usd_toman": 253700,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-29 20:58:47",
+      "updated_at": "2026-09-29 21:12:47",
       "error": null
     },
     "estjt": {
       "name": "اتحادیه طلا تهران",
       "ok": true,
-      "gold18_toman": 25338200,
+      "gold18_toman": 25400600,
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-29T17:29:07Z",
+      "updated_at": "2026-09-29T17:42:57Z",
       "error": null
     },
     "pashizi": {
@@ -39,7 +39,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-29T17:29:07Z",
+      "updated_at": "2026-09-29T17:42:57Z",
       "error": "HTTPError: HTTP Error 403: Forbidden"
     },
     "zarscan": {
@@ -49,7 +49,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-29T17:29:07Z",
+      "updated_at": "2026-09-29T17:42:58Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "geram18": {
@@ -59,7 +59,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-29T17:29:08Z",
+      "updated_at": "2026-09-29T17:42:59Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "navasan_widget": {
@@ -69,7 +69,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-29T17:29:09Z",
+      "updated_at": "2026-09-29T17:43:00Z",
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
   },
@@ -78,7 +78,7 @@
     "usd_toman": 253312
   },
   "spread": {
-    "gold_pct": 0.4477,
+    "gold_pct": 0.6947,
     "usd_pct": 0.3059
   }
 }
