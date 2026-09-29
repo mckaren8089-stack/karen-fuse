@@ -1,0 +1,10 @@
+FROM nginx:1.27-alpine
+
+COPY index.html /usr/share/nginx/html/index.html
+COPY app.js /usr/share/nginx/html/app.js
+COPY style.css /usr/share/nginx/html/style.css
+COPY sw.js /usr/share/nginx/html/sw.js
+COPY manifest.webmanifest /usr/share/nginx/html/manifest.webmanifest
+COPY icon.svg /usr/share/nginx/html/icon.svg
+COPY tgju.html /usr/share/nginx/html/tgju.html
+COPY data /usr/share/nginx/html/data
