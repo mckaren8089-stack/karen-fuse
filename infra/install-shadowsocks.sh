@@ -13,7 +13,6 @@ apt-get update
 apt-get install -y shadowsocks-libev ca-certificates curl
 
 mkdir -p "$CONF_DIR"
-chmod 700 "$CONF_DIR"
 
 if [ -f "$CONF_FILE" ]; then
   PASSWORD="$(python3 - <<'PY'
@@ -35,7 +34,11 @@ cat > "$CONF_FILE" <<EOF
   "fast_open": false
 }
 EOF
-chmod 600 "$CONF_FILE"
+
+# ss-server runs as nobody; grant read/traverse access only through the nogroup group.
+chown root:nogroup "$CONF_DIR" "$CONF_FILE"
+chmod 750 "$CONF_DIR"
+chmod 640 "$CONF_FILE"
 
 cat > "$UNIT_FILE" <<EOF
 [Unit]
@@ -49,6 +52,7 @@ ExecStart=/usr/bin/ss-server -c $CONF_FILE -u
 Restart=on-failure
 RestartSec=2
 User=nobody
+Group=nogroup
 NoNewPrivileges=true
 
 [Install]
@@ -59,7 +63,9 @@ ufw allow "$PORT/tcp"
 ufw allow "$PORT/udp"
 
 systemctl daemon-reload
-systemctl enable --now karen-shadowsocks.service
+systemctl reset-failed karen-shadowsocks.service 2>/dev/null || true
+systemctl enable karen-shadowsocks.service
+systemctl restart karen-shadowsocks.service
 
 IP="$(curl -4fsS --max-time 10 https://api.ipify.org || hostname -I | awk '{print $1}')"
 ENC="$(printf '%s' "$METHOD:$PASSWORD" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
