@@ -35,7 +35,6 @@ cat > "$CONF_FILE" <<EOF
 }
 EOF
 
-# ss-server runs as nobody; grant read/traverse access only through the nogroup group.
 chown root:nogroup "$CONF_DIR" "$CONF_FILE"
 chmod 750 "$CONF_DIR"
 chmod 640 "$CONF_FILE"
@@ -54,6 +53,8 @@ RestartSec=2
 User=nobody
 Group=nogroup
 NoNewPrivileges=true
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target
@@ -66,6 +67,7 @@ systemctl daemon-reload
 systemctl reset-failed karen-shadowsocks.service 2>/dev/null || true
 systemctl enable karen-shadowsocks.service
 systemctl restart karen-shadowsocks.service
+sleep 2
 
 IP="$(curl -4fsS --max-time 10 https://api.ipify.org || hostname -I | awk '{print $1}')"
 ENC="$(printf '%s' "$METHOD:$PASSWORD" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
