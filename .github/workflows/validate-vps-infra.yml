@@ -1,0 +1,24 @@
+name: Validate VPS Infra Scripts
+
+on:
+  push:
+    branches:
+      - infra/bootstrap-vps-test
+    paths:
+      - "infra/**"
+      - ".github/workflows/validate-vps-infra.yml"
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bash syntax check
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in infra/*.sh; do
+            echo "checking $f"
+            bash -n "$f"
+          done
