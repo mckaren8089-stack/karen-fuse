@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-09-30T04:33:14Z",
+  "generated_at": "2026-09-30T04:47:58Z",
   "sources": {
     "alanchand": {
       "name": "الان چند",
@@ -9,7 +9,7 @@
       "usd_toman": 253375,
       "usd_buy_toman": 252100,
       "usd_sell_toman": 254650,
-      "updated_at": "2026-09-30T04:33:07Z",
+      "updated_at": "2026-09-30T04:47:50Z",
       "error": null
     },
     "tgju": {
@@ -19,7 +19,7 @@
       "usd_toman": 253700,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-30 08:03:05",
+      "updated_at": "2026-09-30 08:17:42",
       "error": null
     },
     "estjt": {
@@ -29,7 +29,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-30T04:33:11Z",
+      "updated_at": "2026-09-30T04:47:55Z",
       "error": null
     },
     "pashizi": {
@@ -39,7 +39,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-30T04:33:11Z",
+      "updated_at": "2026-09-30T04:47:55Z",
       "error": "HTTPError: HTTP Error 403: Forbidden"
     },
     "zarscan": {
@@ -49,7 +49,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-30T04:33:12Z",
+      "updated_at": "2026-09-30T04:47:56Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "geram18": {
@@ -59,7 +59,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-30T04:33:13Z",
+      "updated_at": "2026-09-30T04:47:57Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "navasan_widget": {
@@ -69,7 +69,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-09-30T04:33:14Z",
+      "updated_at": "2026-09-30T04:47:58Z",
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
   },
