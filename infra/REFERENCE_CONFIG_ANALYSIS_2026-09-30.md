@@ -107,3 +107,52 @@ Conclusion:
 - The current Hetzner VPS remains a valid candidate.
 - The next experiment should reproduce the **working REALITY profile shape** on the existing Hetzner server before buying another VPS: direct TCP/443, no Vision flow, fingerprint random, controlled REALITY target/SNI selected and validated server-side, and matching client routing/DNS behavior.
 - Change this configuration family as a unit; do not resume random port/cipher cycling.
+
+
+## Controlled direct-REALITY reproduction result
+
+The reference-shaped direct REALITY test on the existing Hetzner VPS was completed server-side and then failed from the Android client.
+
+Server-side test shape:
+- endpoint: `91.107.140.178:443`
+- VLESS + TCP/RAW + REALITY
+- no Vision flow
+- fingerprint: `random`
+- SNI/target: `play.google.com / play.google.com:443`
+- 6-hex short ID
+- target feasibility scan: passed
+- `xray tls ping`: passed
+- stored 3x-ui profile verification: passed
+- TCP/443 listener verification: passed
+- Android remote connection: **failed**
+
+This means the failed Karen Lab result cannot be explained only by the previously observed differences in Vision flow, fingerprint, short-ID length, or the Microsoft-vs-Google REALITY target choice.
+
+No X.509 certificate was issued or installed for this test. REALITY does not use a server-owned public certificate in the same way as ordinary TLS; it uses the target site's TLS appearance/handshake characteristics.
+
+## Next architecture under evaluation: Cloudflare-fronted TLS
+
+Do not continue random REALITY parameter changes.
+
+The next materially different topology to test is:
+
+```
+Android
+  -> Cloudflare edge on HTTPS/443
+  -> Cloudflare-to-origin TLS
+  -> Nginx on the existing Hetzner VPS
+  -> path-based reverse proxy
+  -> local Xray VLESS transport
+  -> Internet
+```
+
+For the first CDN-fronted acceptance test, use a transport Cloudflare explicitly proxies reliably (WebSocket over HTTPS) as the baseline. Once the CDN/TLS path is proven, XHTTP can be evaluated without changing the edge/origin certificate architecture.
+
+Requirements before deployment:
+- a domain controlled by the user and active in Cloudflare
+- a proxied hostname for the test
+- Cloudflare edge certificate (normally Universal SSL, managed by Cloudflare)
+- an origin certificate/private key installed only on the Hetzner origin, preferably Cloudflare Origin CA
+- Cloudflare SSL mode Full (strict)
+
+The client SNI in this topology is the user's Cloudflare hostname, not a REALITY camouflage name such as `play.google.com`.
