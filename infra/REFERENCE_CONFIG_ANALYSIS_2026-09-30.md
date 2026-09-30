@@ -47,3 +47,29 @@ Do not spend more time changing Shadowsocks ciphers or random ports on the same 
 A domain pointed directly at `91.107.140.178` would preserve the same first-hop topology and is not expected to reproduce the reference architecture by itself.
 
 The next design step is to choose and implement a reachable ingress/front layer for the existing foreign VPS, then test one controlled configuration end-to-end.
+
+
+## Recommended reproduction architecture
+
+For the first controlled reproduction, use a two-node Layer-4 relay topology rather than changing proxy protocols again:
+
+```
+Android client
+  -> domain:443
+  -> Iran ingress public IPv4
+  -> HAProxy TCP relay
+  -> Hetzner origin/backend on a dedicated TCP port
+  -> Xray Shadowsocks inbound
+  -> Internet
+```
+
+Design rules:
+- Keep the client-facing port at TCP/443.
+- For the first acceptance run, keep the same Shadowsocks method and raw TCP shape as the known-working reference, while generating a new private password.
+- The Iran node does not terminate Shadowsocks; it relays the encrypted TCP payload at Layer 4.
+- Bind the Hetzner backend Shadowsocks port so that its firewall accepts it only from the Iran ingress public IPv4.
+- The public domain should resolve to the Iran ingress, not directly to the Hetzner origin.
+- Do not introduce a normal HTTP CDN in the first reproduction. Raw Shadowsocks/TCP is not an HTTP payload and an ordinary HTTP CDN is a different topology.
+- If the Iran-to-Hetzner direct server path is unreliable, the next fallback is a persistent server-to-server tunnel/reverse path; do not change the client protocol first.
+
+This architecture is intentionally minimal so the first-hop topology matches the known-working profile while preserving the existing Hetzner server as the foreign egress.
