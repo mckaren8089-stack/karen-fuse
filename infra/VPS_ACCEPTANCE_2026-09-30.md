@@ -30,7 +30,8 @@ Status: **Accepted for Karen Lab testing and migration work**
 The VPS is suitable to keep for the next phase. Further work should focus on reproducible client/server configuration, backup/restore readiness, and reducing public management-plane exposure.
 
 ## Pending
-- Create encrypted/sensitive VPS state backup and record SHA-256.
+- Baseline sensitive VPS state backup created on-server at `2026-09-30T02:02:27Z`.
+- Backup SHA-256: `567d6252ee5fa024ff176caa5d199d9b0119f30be84050c2d0016d4886d4ad0e`.
 - Export backup off-server.
 - Close unnecessary public management ports after backup.
 - Final acceptance snapshot should be archived as RTL Persian PDF + DOCX with SHA-256 manifest according to Karen Lab archive policy.
