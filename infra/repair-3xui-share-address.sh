@@ -79,7 +79,7 @@ PY
 
 echo "[4/4] Verify Xray is still listening on 443"
 systemctl is-active --quiet x-ui
-ss -lntup | grep -E '[:.]443\\b'
+ss -lntup | grep ':443'
 
 echo
 echo "3XUI_SHARE_ADDRESS_FIXED"
