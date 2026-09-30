@@ -6,6 +6,7 @@ CLIENT_EMAIL="karen-test"
 REMARK="Karen-SS-443"
 METHOD="aes-256-gcm"
 PORT=443
+PUBLIC_IP="$(curl -4fsS --max-time 10 https://api.ipify.org)"
 
 if [ ! -r "$ENV_FILE" ]; then
   echo "ERROR: $ENV_FILE not readable"
@@ -37,15 +38,18 @@ fi
 
 echo "[2/6] Create a Shadowsocks inbound through 3x-ui/Xray"
 SERVER_PASS="$(openssl rand -hex 24)"
-INBOUND_PAYLOAD="$(python3 - "$SERVER_PASS" <<'PY'
+INBOUND_PAYLOAD="$(python3 - "$SERVER_PASS" "$PUBLIC_IP" <<'PY'
 import json, sys
 server_pass=sys.argv[1]
+public_ip=sys.argv[2]
 print(json.dumps({
   "enable": True,
   "remark": "Karen-SS-443",
   "listen": "",
   "port": 443,
   "protocol": "shadowsocks",
+  "shareAddrStrategy": "custom",
+  "shareAddr": public_ip,
   "expiryTime": 0,
   "total": 0,
   "trafficReset": "never",
