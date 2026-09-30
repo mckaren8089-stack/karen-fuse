@@ -2,13 +2,6 @@
 set -Eeuo pipefail
 
 ENV_FILE="/etc/x-ui/install-result.env"
-REALITY_REMARK="Karen-VLESS-Reality-443"
-CLIENT_EMAIL="karen-reality-reference"
-PORT=443
-TARGET="play.google.com:443"
-SNI="play.google.com"
-STATE_DIR="/root/karen-secrets"
-
 if [ ! -r "$ENV_FILE" ]; then
   echo "ERROR: $ENV_FILE not readable"
   exit 1
@@ -16,271 +9,288 @@ fi
 
 # shellcheck disable=SC1091
 source "$ENV_FILE"
+export XUI_PANEL_PORT XUI_WEB_BASE_PATH XUI_API_TOKEN
 
-BASE_PATH="${XUI_WEB_BASE_PATH#/}"
-BASE_PATH="${BASE_PATH%/}"
-API="http://127.0.0.1:${XUI_PANEL_PORT}/${BASE_PATH}/panel/api"
-BEARER=(-H "Authorization: Bearer ${XUI_API_TOKEN}")
-JSON=(-H "Authorization: Bearer ${XUI_API_TOKEN}" -H "Content-Type: application/json")
+python3 - <<'PY'
+import datetime
+import glob
+import json
+import os
+import secrets
+import subprocess
+import sys
+import time
+import urllib.parse
+import urllib.request
 
-mkdir -p "$STATE_DIR"
-chmod 700 "$STATE_DIR"
+REMARK = "Karen-VLESS-Reality-443"
+TARGET = "play.google.com:443"
+SNI = "play.google.com"
+PORT = 443
+STATE_DIR = "/root/karen-secrets"
 
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-BACKUP="$STATE_DIR/pre-reference-reality-${STAMP}.json"
-LINK_FILE="$STATE_DIR/3xui-vless-reality-reference-link.txt"
-CHANGED=0
-REALITY_ID=""
+panel_port = os.environ["XUI_PANEL_PORT"]
+base_path = os.environ.get("XUI_WEB_BASE_PATH", "").strip("/")
+token = os.environ["XUI_API_TOKEN"]
+api = f"http://127.0.0.1:{panel_port}/"
+if base_path:
+    api += base_path + "/"
+api += "panel/api"
 
-api_ok() {
-  python3 - "$1" <<'PY'
-import json,sys
-r=json.loads(sys.argv[1])
-if not r.get("success"):
-    raise SystemExit("API ERROR: "+str(r))
-PY
-}
+os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+os.chmod(STATE_DIR, 0o700)
+stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+backup_path = f"{STATE_DIR}/pre-reference-reality-{stamp}.json"
+link_path = f"{STATE_DIR}/3xui-vless-reality-reference-link.txt"
 
-rollback() {
-  rc=$?
-  set +e
-  if [ "$CHANGED" = "1" ] && [ -n "$REALITY_ID" ] && [ -r "$BACKUP" ]; then
-    ORIGINAL="$(python3 - "$BACKUP" <<'PY' 2>/dev/null || true
-import json,sys
-with open(sys.argv[1]) as f:
-    r=json.load(f)
-obj=r.get("obj")
-if isinstance(obj,dict):
-    print(json.dumps(obj,separators=(",",":")))
-PY
-)"
-    if [ -n "$ORIGINAL" ]; then
-      curl -fsS "${JSON[@]}" -X POST "$API/inbounds/update/$REALITY_ID" -d "$ORIGINAL" >/dev/null 2>&1 || true
-      sleep 2
-    fi
-  fi
-  echo "ROLLBACK_ATTEMPTED"
-  exit "$rc"
-}
-trap rollback ERR
+changed = False
+inbound_id = None
+original_response = None
 
-echo "[1/8] Locate and preserve the current REALITY inbound"
-OPTIONS="$(curl -fsS "${BEARER[@]}" "$API/inbounds/options")"
-REALITY_ID="$(python3 - "$OPTIONS" "$REALITY_REMARK" "$PORT" <<'PY'
-import json,sys
-r=json.loads(sys.argv[1]); remark=sys.argv[2]; port=int(sys.argv[3])
-for x in r.get("obj") or []:
-    if x.get("remark")==remark and x.get("port")==port and x.get("protocol")=="vless":
-        print(x["id"]); break
-else:
-    raise SystemExit("ERROR: expected REALITY inbound not found")
-PY
-)"
+def request(path, method="GET", json_data=None, form_data=None, timeout=25):
+    headers = {"Authorization": f"Bearer {token}"}
+    body = None
+    if json_data is not None:
+        body = json.dumps(json_data, separators=(",", ":")).encode()
+        headers["Content-Type"] = "application/json"
+    elif form_data is not None:
+        body = urllib.parse.urlencode(form_data).encode()
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+    req = urllib.request.Request(api + path, data=body, headers=headers, method=method)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode())
 
-curl -fsS "${BEARER[@]}" "$API/inbounds/get/$REALITY_ID" > "$BACKUP"
-chmod 600 "$BACKUP"
+def require_success(resp, label):
+    if not resp.get("success"):
+        raise RuntimeError(f"{label}: API returned failure: {resp}")
 
-echo "[2/8] Validate the reference REALITY target before changing anything"
-SCAN="$(curl -fsS "${BEARER[@]}" -X POST   --data-urlencode "target=$TARGET"   --data-urlencode "sni=$SNI"   --data-urlencode "xver=0"   --data-urlencode "allowPrivate=false"   "$API/server/scanRealityTarget")"
+def decode_nested(value):
+    if isinstance(value, str):
+        return json.loads(value)
+    return value or {}
 
-python3 - "$SCAN" "$TARGET" "$SNI" <<'PY'
-import json,sys
-r=json.loads(sys.argv[1]); target=sys.argv[2]; sni=sys.argv[3]
-o=r.get("obj") or {}
-if not r.get("success") or not o.get("feasible"):
-    raise SystemExit("ERROR: play.google.com did not pass 3x-ui REALITY target validation")
-names=o.get("serverNames") or []
-if names and sni not in names:
-    raise SystemExit("ERROR: requested SNI is not valid for the scanned target")
-print("REALITY_TARGET_OK:", target, "/", sni)
-PY
+def rollback():
+    global changed
+    if changed and inbound_id is not None and original_response:
+        try:
+            obj = original_response.get("obj")
+            if isinstance(obj, dict):
+                resp = request(f"/inbounds/update/{inbound_id}", method="POST", json_data=obj)
+                require_success(resp, "rollback")
+                time.sleep(2)
+                print("ROLLBACK_OK")
+                return
+        except Exception as exc:
+            print(f"ROLLBACK_FAILED: {exc}")
+    print("ROLLBACK_NOT_NEEDED")
 
-# Cross-check with Xray's own TLS inspector when the bundled binary is available.
-XRAY_BIN=""
-for p in /usr/local/x-ui/bin/xray-linux-* /usr/local/x-ui/bin/xray; do
-  if [ -x "$p" ]; then XRAY_BIN="$p"; break; fi
-done
-if [ -n "$XRAY_BIN" ]; then
-  "$XRAY_BIN" tls ping "$TARGET" >/tmp/karen-xray-tls-ping.txt 2>&1 || {
-    cat /tmp/karen-xray-tls-ping.txt
-    echo "ERROR: xray tls ping rejected the selected target"
-    exit 1
-  }
-  echo "XRAY_TLS_PING_OK"
-else
-  echo "XRAY_TLS_PING_SKIPPED: bundled xray binary not found at expected path"
-fi
+try:
+    print("[1/8] Locate and preserve the current REALITY inbound")
+    options = request("/inbounds/options")
+    require_success(options, "inbound options")
+    for item in options.get("obj") or []:
+        if item.get("remark") == REMARK and item.get("port") == PORT and item.get("protocol") == "vless":
+            inbound_id = item.get("id")
+            break
+    if inbound_id is None:
+        raise RuntimeError("expected REALITY inbound not found")
 
-echo "[3/8] Generate fresh VLESS and REALITY credentials"
-UUID_RESP="$(curl -fsS "${BEARER[@]}" "$API/server/getNewUUID")"
-KEY_RESP="$(curl -fsS "${BEARER[@]}" "$API/server/getNewX25519Cert")"
+    original_response = request(f"/inbounds/get/{inbound_id}")
+    require_success(original_response, "read current REALITY inbound")
+    with open(backup_path, "w", encoding="utf-8") as fh:
+        json.dump(original_response, fh, ensure_ascii=False, separators=(",", ":"))
+    os.chmod(backup_path, 0o600)
 
-read -r CLIENT_UUID PRIVATE_KEY PUBLIC_KEY < <(python3 - "$UUID_RESP" "$KEY_RESP" <<'PY'
-import json,sys
-u=json.loads(sys.argv[1]); k=json.loads(sys.argv[2])
-if not u.get("success") or not k.get("success"):
-    raise SystemExit("ERROR: credential generation failed")
-uuid=(u.get("obj") or {}).get("uuid","")
-priv=(k.get("obj") or {}).get("privateKey","")
-pub=(k.get("obj") or {}).get("publicKey","")
-if not all((uuid,priv,pub)):
-    raise SystemExit("ERROR: generated credentials incomplete")
-print(uuid,priv,pub)
-PY
-)"
+    print("[2/8] Validate play.google.com as the controlled REALITY target")
+    scan = request(
+        "/server/scanRealityTarget",
+        method="POST",
+        form_data={
+            "target": TARGET,
+            "sni": SNI,
+            "xver": "0",
+            "allowPrivate": "false",
+        },
+    )
+    require_success(scan, "REALITY target scan")
+    scan_obj = scan.get("obj") or {}
+    if not scan_obj.get("feasible"):
+        raise RuntimeError("play.google.com did not pass REALITY target validation")
+    names = scan_obj.get("serverNames") or []
+    if names and SNI not in names:
+        raise RuntimeError("play.google.com is not present in the validated certificate names")
+    print("REALITY_TARGET_OK")
 
-# Match the known-working profile shape: six hex characters.
-SHORT_ID="$(openssl rand -hex 3)"
-PUBLIC_IP="$(curl -4fsS --max-time 10 https://api.ipify.org)"
+    binaries = sorted(glob.glob("/usr/local/x-ui/bin/xray-linux-*"))
+    if os.path.isfile("/usr/local/x-ui/bin/xray") and os.access("/usr/local/x-ui/bin/xray", os.X_OK):
+        binaries.append("/usr/local/x-ui/bin/xray")
+    binaries = [p for p in binaries if os.access(p, os.X_OK)]
+    if binaries:
+        check = subprocess.run(
+            [binaries[0], "tls", "ping", TARGET],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            timeout=30,
+        )
+        if check.returncode != 0:
+            print(check.stdout[-3000:])
+            raise RuntimeError("xray tls ping rejected play.google.com")
+        print("XRAY_TLS_PING_OK")
+    else:
+        print("XRAY_TLS_PING_SKIPPED")
 
-echo "[4/8] Replace only the REALITY profile shape on TCP/443"
-CURRENT="$(cat "$BACKUP")"
-PAYLOAD="$(python3 - "$CURRENT" "$PUBLIC_IP" "$CLIENT_UUID" "$PRIVATE_KEY" "$PUBLIC_KEY" "$SHORT_ID" "$TARGET" "$SNI" "$CLIENT_EMAIL" <<'PY'
-import json,sys
-r=json.loads(sys.argv[1])
-obj=r.get("obj")
-if not isinstance(obj,dict):
-    raise SystemExit("ERROR: missing current inbound object")
-ip,uuid,priv,pub,sid,target,sni,email=sys.argv[2:]
+    print("[3/8] Generate fresh VLESS and REALITY credentials")
+    uuid_resp = request("/server/getNewUUID")
+    key_resp = request("/server/getNewX25519Cert")
+    require_success(uuid_resp, "UUID generation")
+    require_success(key_resp, "X25519 generation")
+    client_uuid = (uuid_resp.get("obj") or {}).get("uuid")
+    key_obj = key_resp.get("obj") or {}
+    private_key = key_obj.get("privateKey")
+    public_key = key_obj.get("publicKey")
+    if not all((client_uuid, private_key, public_key)):
+        raise RuntimeError("generated credentials are incomplete")
 
-obj["enable"]=True
-obj["listen"]=""
-obj["port"]=443
-obj["protocol"]="vless"
-obj["shareAddrStrategy"]="custom"
-obj["shareAddr"]=ip
-obj["settings"]={
-  "clients":[{
-    "id":uuid,
-    "email":email,
-    "flow":"",
-    "limitIp":0,
-    "totalGB":0,
-    "expiryTime":0,
-    "enable":True,
-    "tgId":0,
-    "subId":"karen-reality-reference",
-    "comment":"Karen Lab known-working-shape REALITY test",
-    "reset":0
-  }],
-  "decryption":"none",
-  "encryption":"none",
-  "fallbacks":[]
-}
-obj["streamSettings"]={
-  "network":"tcp",
-  "tcpSettings":{"header":{"type":"none"}},
-  "security":"reality",
-  "realitySettings":{
-    "show":False,
-    "xver":0,
-    "target":target,
-    "serverNames":[sni],
-    "privateKey":priv,
-    "minClientVer":"",
-    "maxClientVer":"",
-    "maxTimediff":0,
-    "shortIds":[sid],
-    "mldsa65Seed":"",
-    "settings":{
-      "publicKey":pub,
-      "fingerprint":"random",
-      "serverName":sni,
-      "spiderX":"/",
-      "mldsa65Verify":""
+    short_id = secrets.token_hex(3)
+    with urllib.request.urlopen("https://api.ipify.org", timeout=10) as resp:
+        public_ip = resp.read().decode().strip()
+
+    print("[4/8] Apply the known-working client shape on the existing TCP/443 inbound")
+    current = original_response.get("obj")
+    if not isinstance(current, dict):
+        raise RuntimeError("missing current inbound object")
+
+    payload = dict(current)
+    payload.update({
+        "enable": True,
+        "listen": "",
+        "port": 443,
+        "protocol": "vless",
+        "shareAddrStrategy": "custom",
+        "shareAddr": public_ip,
+    })
+    payload["settings"] = {
+        "clients": [{
+            "id": client_uuid,
+            "email": "karen-reality-reference",
+            "flow": "",
+            "limitIp": 0,
+            "totalGB": 0,
+            "expiryTime": 0,
+            "enable": True,
+            "tgId": 0,
+            "subId": "karen-reality-reference",
+            "comment": "Karen Lab controlled REALITY reference-shape test",
+            "reset": 0,
+        }],
+        "decryption": "none",
+        "encryption": "none",
+        "fallbacks": [],
     }
-  }
-}
-obj["sniffing"]={
-  "enabled":True,
-  "destOverride":["http","tls","quic"],
-  "metadataOnly":False,
-  "routeOnly":True,
-  "ipsExcluded":[],
-  "domainsExcluded":[]
-}
-print(json.dumps(obj,separators=(",",":")))
+    payload["streamSettings"] = {
+        "network": "tcp",
+        "tcpSettings": {"header": {"type": "none"}},
+        "security": "reality",
+        "realitySettings": {
+            "show": False,
+            "xver": 0,
+            "target": TARGET,
+            "serverNames": [SNI],
+            "privateKey": private_key,
+            "minClientVer": "",
+            "maxClientVer": "",
+            "maxTimediff": 0,
+            "shortIds": [short_id],
+            "mldsa65Seed": "",
+            "settings": {
+                "publicKey": public_key,
+                "fingerprint": "random",
+                "serverName": SNI,
+                "spiderX": "/",
+                "mldsa65Verify": "",
+            },
+        },
+    }
+    payload["sniffing"] = {
+        "enabled": True,
+        "destOverride": ["http", "tls", "quic"],
+        "metadataOnly": False,
+        "routeOnly": True,
+        "ipsExcluded": [],
+        "domainsExcluded": [],
+    }
+
+    update = request(f"/inbounds/update/{inbound_id}", method="POST", json_data=payload)
+    require_success(update, "update REALITY inbound")
+    changed = True
+    time.sleep(3)
+
+    print("[5/8] Verify the stored profile")
+    verify = request(f"/inbounds/get/{inbound_id}")
+    require_success(verify, "verify REALITY inbound")
+    obj = verify.get("obj") or {}
+    settings = decode_nested(obj.get("settings"))
+    stream = decode_nested(obj.get("streamSettings"))
+    clients = settings.get("clients") or []
+    if len(clients) != 1:
+        raise RuntimeError("unexpected client count")
+    if clients[0].get("flow") not in ("", None):
+        raise RuntimeError("Vision flow is still enabled")
+    if stream.get("network") != "tcp" or stream.get("security") != "reality":
+        raise RuntimeError("transport/security mismatch")
+    reality = stream.get("realitySettings") or {}
+    if reality.get("target") != TARGET or SNI not in (reality.get("serverNames") or []):
+        raise RuntimeError("REALITY target/SNI mismatch")
+    defaults = reality.get("settings") or {}
+    if defaults.get("fingerprint") != "random":
+        raise RuntimeError("fingerprint is not random")
+    if defaults.get("serverName") != SNI or defaults.get("spiderX") != "/":
+        raise RuntimeError("SNI/spiderX mismatch")
+    print("REFERENCE_PROFILE_STORED_OK")
+
+    print("[6/8] Verify x-ui and TCP/443")
+    subprocess.run(["systemctl", "is-active", "--quiet", "x-ui"], check=True)
+    listeners = subprocess.check_output(["ss", "-H", "-lntp"], text=True)
+    if ":443 " not in listeners and ":443\n" not in listeners:
+        raise RuntimeError("no TCP/443 listener after update")
+    print("TCP_443_LISTENER_OK")
+
+    print("[7/8] Create an exact no-Vision import link")
+    query = urllib.parse.urlencode([
+        ("type", "tcp"),
+        ("headerType", "none"),
+        ("security", "reality"),
+        ("encryption", "none"),
+        ("pbk", public_key),
+        ("fp", "random"),
+        ("sni", SNI),
+        ("sid", short_id),
+        ("spx", "/"),
+    ])
+    name = urllib.parse.quote("Karen-REALITY-reference")
+    link = f"vless://{client_uuid}@{public_ip}:443?{query}#{name}"
+    if "flow=" in link:
+        raise RuntimeError("generated link unexpectedly contains flow")
+    with open(link_path, "w", encoding="utf-8") as fh:
+        fh.write(link + "\n")
+    os.chmod(link_path, 0o600)
+    print("IMPORT_LINK_OK")
+
+    print("[8/8] Final status")
+    print("KAREN_REALITY_REFERENCE_READY")
+    print(f"Endpoint: {public_ip}:443")
+    print("Transport: VLESS + TCP/RAW + REALITY")
+    print("Flow: none")
+    print("Fingerprint: random")
+    print(f"SNI/target: {SNI} / {TARGET}")
+    print("Short ID: 6 hex chars")
+    print(f"Import link: {link_path}")
+    print(f"Rollback snapshot: {backup_path}")
+    print("Do NOT paste the import link into chat.")
+
+except Exception as exc:
+    print(f"ERROR: {exc}")
+    rollback()
+    sys.exit(1)
 PY
-)"
-
-RESP="$(curl -fsS "${JSON[@]}" -X POST "$API/inbounds/update/$REALITY_ID" -d "$PAYLOAD")"
-api_ok "$RESP"
-CHANGED=1
-sleep 3
-
-echo "[5/8] Verify the stored 3x-ui configuration"
-VERIFY="$(curl -fsS "${BEARER[@]}" "$API/inbounds/get/$REALITY_ID")"
-python3 - "$VERIFY" "$SNI" "$TARGET" <<'PY'
-import json,sys
-r=json.loads(sys.argv[1]); sni=sys.argv[2]; target=sys.argv[3]
-o=r.get("obj") or {}
-
-def decode(v):
-    if isinstance(v,str):
-        return json.loads(v)
-    return v or {}
-
-settings=decode(o.get("settings"))
-stream=decode(o.get("streamSettings"))
-clients=settings.get("clients") or []
-if len(clients)!=1:
-    raise SystemExit("ERROR: unexpected client count after update")
-if clients[0].get("flow") not in ("",None):
-    raise SystemExit("ERROR: Vision flow is still enabled")
-if stream.get("network")!="tcp" or stream.get("security")!="reality":
-    raise SystemExit("ERROR: transport/security mismatch")
-rs=stream.get("realitySettings") or {}
-if rs.get("target")!=target or sni not in (rs.get("serverNames") or []):
-    raise SystemExit("ERROR: REALITY target/SNI mismatch")
-cs=rs.get("settings") or {}
-if cs.get("fingerprint")!="random" or cs.get("serverName")!=sni or cs.get("spiderX")!="/":
-    raise SystemExit("ERROR: client REALITY defaults do not match reference shape")
-print("REFERENCE_PROFILE_STORED_OK")
-PY
-
-echo "[6/8] Verify Xray owns TCP/443"
-systemctl is-active --quiet x-ui
-if ! ss -H -lntp | grep -qE '[:.]443\b'; then
-  echo "ERROR: no TCP/443 listener after update"
-  exit 1
-fi
-echo "TCP_443_LISTENER_OK"
-
-echo "[7/8] Write an exact no-Vision import link locally"
-python3 - "$CLIENT_UUID" "$PUBLIC_IP" "$PUBLIC_KEY" "$SHORT_ID" "$SNI" "$LINK_FILE" <<'PY'
-import os,sys,urllib.parse
-uuid,ip,pbk,sid,sni,path=sys.argv[1:]
-params=[
-    ("type","tcp"),
-    ("headerType","none"),
-    ("security","reality"),
-    ("encryption","none"),
-    ("pbk",pbk),
-    ("fp","random"),
-    ("sni",sni),
-    ("sid",sid),
-    ("spx","/"),
-]
-q=urllib.parse.urlencode(params)
-name=urllib.parse.quote("Karen-REALITY-reference")
-link=f"vless://{uuid}@{ip}:443?{q}#{name}"
-with open(path,"w") as f:
-    f.write(link+"\n")
-os.chmod(path,0o600)
-if "flow=" in link:
-    raise SystemExit("ERROR: generated link unexpectedly contains flow")
-print("IMPORT_LINK_OK")
-PY
-
-echo "[8/8] Final status"
-trap - ERR
-echo "KAREN_REALITY_REFERENCE_READY"
-echo "Endpoint: $PUBLIC_IP:$PORT"
-echo "Transport: VLESS + TCP/RAW + REALITY"
-echo "Flow: none"
-echo "Fingerprint: random"
-echo "SNI/target: $SNI / $TARGET"
-echo "Short ID: 6 hex chars"
-echo "Import link: $LINK_FILE"
-echo "Rollback snapshot: $BACKUP"
-echo "Do NOT paste the import link into chat."
