@@ -1,6 +1,6 @@
 # VPS Acceptance — 2026-09-30
 
-Status: **Accepted for Karen Lab testing and migration work**
+Status: **Acceptance pending — no successful remote proxy connection has been confirmed yet**
 
 ## Server
 - Provider panel: Arianet / Ariaservice
@@ -18,8 +18,8 @@ Status: **Accepted for Karen Lab testing and migration work**
 - Outbound access to GitHub, GitHub API and Docker Registry works.
 - Xray / 3x-ui is installed and running.
 - VLESS + REALITY + Vision on TCP/443 was created successfully and imported on the remote Android client.
-- Remote REALITY connection succeeded.
-- Earlier Shadowsocks failures did not establish a VPS health failure; server-side listeners and local proxy tests were healthy. The remaining issue was in the connection/configuration path rather than the VPS resource itself.
+- VLESS + REALITY was imported on the remote Android client, but **no successful remote connection has been confirmed**.
+- Earlier Shadowsocks and REALITY tests have not yet established whether the remaining failure is in the VPS/network path or in the proxy configuration. Server-side listeners and local tests are healthy, but end-to-end remote acceptance is still unresolved.
 
 ## Current proxy state
 - VLESS + REALITY owns TCP/443.
@@ -27,7 +27,7 @@ Status: **Accepted for Karen Lab testing and migration work**
 - No credentials, UUIDs, private keys, share links or API tokens are stored in this repository note.
 
 ## Decision
-The VPS is suitable to keep for the next phase. Further work should focus on reproducible client/server configuration, backup/restore readiness, and reducing public management-plane exposure.
+No final VPS acceptance decision yet. The next step is an end-to-end packet-path test during a REALITY connection attempt. Only after that result should the server be accepted or rejected for the intended proxy use.
 
 ## Pending
 - Baseline sensitive VPS state backup created on-server at `2026-09-30T02:02:27Z`.
