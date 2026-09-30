@@ -32,7 +32,7 @@ sleep 1
 
 if ss -lntup | grep -qE '[:.]443\b'; then
   echo "ERROR: port 443 is already in use:"
-  ss -lntup | grep -E '[:.]443\b' || true
+  ss -lntup | grep ':443' || true
   exit 1
 fi
 
@@ -152,7 +152,7 @@ PY
 echo "[6/6] Verify Xray listener"
 sleep 2
 systemctl is-active --quiet x-ui
-ss -lntup | grep -E '[:.]443\b'
+ss -lntup | grep ':443'
 
 echo
 echo "3XUI_SHADOWSOCKS_OK"
