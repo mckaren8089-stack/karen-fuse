@@ -99,7 +99,7 @@ if not all((uuid,priv,pub)):
     raise SystemExit("ERROR: generated credentials incomplete")
 print(uuid,priv,pub)
 PY
-)"
+)
 
 SHORT_ID="$(openssl rand -hex 8)"
 SPIDER="/$(openssl rand -hex 8)"
