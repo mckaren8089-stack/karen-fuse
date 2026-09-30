@@ -19,7 +19,7 @@ Status: **Acceptance pending — no successful remote proxy connection has been 
 - Xray / 3x-ui is installed and running.
 - VLESS + REALITY + Vision on TCP/443 was created successfully and imported on the remote Android client.
 - VLESS + REALITY was imported on the remote Android client, but **no successful remote connection has been confirmed**.
-- Earlier Shadowsocks and REALITY tests have not yet established whether the remaining failure is in the VPS/network path or in the proxy configuration. Server-side listeners and local tests are healthy, but end-to-end remote acceptance is still unresolved.
+- A controlled second REALITY test reproduced the known-working client shape on the Hetzner VPS (TCP/443, REALITY, no Vision flow, fingerprint random, play.google.com target/SNI). All server-side validations passed, but the Android remote connection still failed. End-to-end remote acceptance remains unresolved.
 
 ## Current proxy state
 - VLESS + REALITY owns TCP/443.
@@ -27,7 +27,7 @@ Status: **Acceptance pending — no successful remote proxy connection has been 
 - No credentials, UUIDs, private keys, share links or API tokens are stored in this repository note.
 
 ## Decision
-No final VPS acceptance decision yet. The next step is an end-to-end packet-path test during a REALITY connection attempt. Only after that result should the server be accepted or rejected for the intended proxy use.
+No final VPS acceptance decision yet. Do not continue random direct-REALITY tuning. The next architecture to evaluate is a domain-based Cloudflare-fronted TLS path on the same Hetzner origin, so the first hop and certificate topology materially differ from the failed direct-IP tests.
 
 ## Pending
 - Baseline sensitive VPS state backup created on-server at `2026-09-30T02:02:27Z`.
