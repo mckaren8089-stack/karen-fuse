@@ -29,6 +29,8 @@ chmod 700 "$STATE_DIR"
 SS_ID=""
 REALITY_ID=""
 SS_DISABLED=0
+SS_PARKED=0
+PARK_PORT=""
 REALITY_ADDED=0
 
 api_ok() {
@@ -43,14 +45,51 @@ PY
 rollback() {
   rc=$?
   set +e
-  if [ "$REALITY_ADDED" = "1" ] && [ -n "$REALITY_ID" ]; then
-    curl -fsS "${BEARER[@]}" -X POST \
-      -F enable=false "$API/inbounds/setEnable/$REALITY_ID" >/dev/null 2>&1 || true
+
+  # A disabled inbound still reserves its port in 3x-ui. If REALITY was
+  # created, delete that test row before restoring Shadowsocks to 443.
+  if [ "$REALITY_ADDED" = "1" ]; then
+    if [ -z "$REALITY_ID" ]; then
+      OPTIONS_RB="$(curl -fsS "${BEARER[@]}" "$API/inbounds/options" 2>/dev/null || true)"
+      REALITY_ID="$(python3 - "$OPTIONS_RB" <<'PY' 2>/dev/null || true
+import json,sys
+try:
+    r=json.loads(sys.argv[1])
+except Exception:
+    raise SystemExit
+for x in r.get("obj") or []:
+    if x.get("remark")=="Karen-VLESS-Reality-443" and x.get("protocol")=="vless":
+        print(x["id"]); break
+PY
+)"
+    fi
+    if [ -n "$REALITY_ID" ]; then
+      curl -fsS "${BEARER[@]}" -X POST "$API/inbounds/del/$REALITY_ID" >/dev/null 2>&1 || true
+      sleep 1
+    fi
+  fi
+
+  # Restore the exact pre-test Shadowsocks row, then re-enable it.
+  if [ "$SS_PARKED" = "1" ] && [ -n "$SS_ID" ] && [ -r "$STATE_DIR/pre-reality-shadowsocks.json" ]; then
+    RESTORE_PAYLOAD="$(python3 - "$STATE_DIR/pre-reality-shadowsocks.json" <<'PY' 2>/dev/null || true
+import json,sys
+with open(sys.argv[1]) as f:
+    r=json.load(f)
+obj=r.get("obj")
+if isinstance(obj,dict):
+    print(json.dumps(obj,separators=(",",":")))
+PY
+)"
+    if [ -n "$RESTORE_PAYLOAD" ]; then
+      curl -fsS "${JSON[@]}" -X POST "$API/inbounds/update/$SS_ID" -d "$RESTORE_PAYLOAD" >/dev/null 2>&1 || true
+      sleep 1
+    fi
   fi
   if [ "$SS_DISABLED" = "1" ] && [ -n "$SS_ID" ]; then
     curl -fsS "${BEARER[@]}" -X POST \
       -F enable=true "$API/inbounds/setEnable/$SS_ID" >/dev/null 2>&1 || true
   fi
+
   echo "ROLLBACK_ATTEMPTED"
   exit "$rc"
 }
@@ -73,12 +112,62 @@ if [ -n "$SS_ID" ]; then
   api_ok "$RESP"
   SS_DISABLED=1
   sleep 2
+
+  # 3x-ui's port-conflict guard counts disabled DB rows too. Merely disabling
+  # Karen-SS-443 therefore does not free 443 for another inbound. Park the
+  # disabled test row on an unused high port so REALITY can own 443.
+  OPTIONS="$(curl -fsS "${BEARER[@]}" "$API/inbounds/options")"
+  LISTENERS="$(ss -H -lntup || true)"
+  PARK_PORT="$(python3 - "$OPTIONS" "$LISTENERS" <<'PY'
+import json,re,sys
+r=json.loads(sys.argv[1])
+used={int(x.get("port")) for x in (r.get("obj") or []) if str(x.get("port","")).isdigit()}
+listeners=sys.argv[2]
+for p in range(24443, 25443):
+    if p in used:
+        continue
+    if re.search(r'[:.]%d\\b' % p, listeners):
+        continue
+    print(p)
+    break
+else:
+    raise SystemExit("ERROR: no parking port available")
+PY
+)"
+
+  CURRENT_SS="$(cat "$STATE_DIR/pre-reality-shadowsocks.json")"
+  PARK_PAYLOAD="$(python3 - "$CURRENT_SS" "$PARK_PORT" <<'PY'
+import json,sys
+r=json.loads(sys.argv[1])
+obj=r.get("obj")
+if not isinstance(obj,dict):
+    raise SystemExit("ERROR: missing Shadowsocks inbound payload")
+obj["port"]=int(sys.argv[2])
+obj["tag"]=""
+obj["enable"]=False
+print(json.dumps(obj,separators=(",",":")))
+PY
+)"
+  RESP="$(curl -fsS "${JSON[@]}" -X POST "$API/inbounds/update/$SS_ID" -d "$PARK_PAYLOAD")"
+  api_ok "$RESP"
+  SS_PARKED=1
+  sleep 2
+
+  PARK_CHECK="$(curl -fsS "${BEARER[@]}" "$API/inbounds/get/$SS_ID")"
+  python3 - "$PARK_CHECK" "$PARK_PORT" <<'PY'
+import json,sys
+r=json.loads(sys.argv[1])
+obj=r.get("obj") or {}
+if obj.get("port") != int(sys.argv[2]):
+    raise SystemExit("ERROR: Shadowsocks inbound was not moved to the parking port")
+print("Shadowsocks parked on port",sys.argv[2])
+PY
 else
   echo "Current Shadowsocks inbound not found; continuing."
 fi
 
 if ss -lntup | grep -q ':443'; then
-  echo "ERROR: port 443 is still occupied after disabling Shadowsocks"
+  echo "ERROR: port 443 is still occupied after parking Shadowsocks"
   ss -lntup | grep ':443' || true
   exit 1
 fi
