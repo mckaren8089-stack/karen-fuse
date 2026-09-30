@@ -73,3 +73,37 @@ Design rules:
 - If the Iran-to-Hetzner direct server path is unreliable, the next fallback is a persistent server-to-server tunnel/reverse path; do not change the client protocol first.
 
 Do not purchase or provision an Iranian VPS on the basis of this reference alone. Before selecting an architecture, compare at least one known-working profile that reaches a foreign server directly (preferably the user's working REALITY/direct-IP example). The project architecture should be selected from the common requirements of multiple working topologies, not copied from a single reference.
+
+
+## Working direct-foreign REALITY reference
+
+A second known-working profile disproves any requirement for an Iranian ingress.
+
+Observed client configuration:
+- VLESS to `fr-static.gozaronline.net:443`
+- Xray hosts pin: `fr-static.gozaronline.net -> 51.38.160.53`
+- `51.38.160.53` is in OVH AS16276 (foreign datacenter network)
+- transport: TCP/RAW
+- security: REALITY
+- REALITY serverName: `play.google.com`
+- fingerprint: `random`
+- shortId length: 6 hex chars
+- spiderX: `/`
+- no client `flow` field (therefore not Vision in this exported profile)
+- mux disabled
+- UDP/443 blocked in client routing
+
+Comparison with Karen Lab failed REALITY:
+- Both use a direct foreign first hop on TCP/443 and REALITY over TCP/RAW.
+- Karen Lab used Hetzner `91.107.140.178:443`; reference uses OVH `51.38.160.53:443`.
+- Karen Lab profile used `flow=xtls-rprx-vision`; working reference has no flow.
+- Karen Lab used fingerprint `chrome`; working reference uses `random`.
+- Karen Lab selected Microsoft target/SNI; working reference uses `play.google.com` as client SNI (server-side target is not visible in client JSON).
+- The working reference statically pins its public hostname to the foreign origin IP in Xray DNS.
+
+Conclusion:
+- An Iranian ingress is not required.
+- A normal CDN is not required by this successful direct-foreign reference.
+- The current Hetzner VPS remains a valid candidate.
+- The next experiment should reproduce the **working REALITY profile shape** on the existing Hetzner server before buying another VPS: direct TCP/443, no Vision flow, fingerprint random, controlled REALITY target/SNI selected and validated server-side, and matching client routing/DNS behavior.
+- Change this configuration family as a unit; do not resume random port/cipher cycling.
