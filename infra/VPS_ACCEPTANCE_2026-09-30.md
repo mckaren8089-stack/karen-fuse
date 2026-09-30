@@ -35,3 +35,11 @@ The VPS is suitable to keep for the next phase. Further work should focus on rep
 - Export backup off-server.
 - Close unnecessary public management ports after backup.
 - Final acceptance snapshot should be archived as RTL Persian PDF + DOCX with SHA-256 manifest according to Karen Lab archive policy.
+
+
+## Firewall cleanup progress
+- Removed stale public TCP/31457 rule (IPv4 + IPv6).
+- Removed public 3x-ui panel TCP/54036 rule (IPv4 + IPv6).
+- SSH TCP/22 remains open.
+- TCP/443 remains open for VLESS + REALITY.
+- TCP/80 and UDP/443 are still pending review; they have not been closed yet.
