@@ -1736,6 +1736,14 @@
       "gold_spread_pct": 0.2097,
       "usd_spread_pct": 0.0883,
       "source_count": 3
+    },
+    {
+      "ts": "2026-09-30T17:37:21Z",
+      "gold18_toman": 25402830,
+      "usd_toman": 254762,
+      "gold_spread_pct": 0.422,
+      "usd_spread_pct": 0.0491,
+      "source_count": 3
     }
   ]
 }
