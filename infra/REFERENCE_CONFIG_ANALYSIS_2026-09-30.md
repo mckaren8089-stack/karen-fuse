@@ -49,9 +49,9 @@ A domain pointed directly at `91.107.140.178` would preserve the same first-hop 
 The next design step is to choose and implement a reachable ingress/front layer for the existing foreign VPS, then test one controlled configuration end-to-end.
 
 
-## Recommended reproduction architecture
+## Candidate architecture — not yet selected
 
-For the first controlled reproduction, use a two-node Layer-4 relay topology rather than changing proxy protocols again:
+A two-node Layer-4 relay topology is one plausible reproduction of the working reference, but it is **not yet justified as the project architecture**. The reference profile proves that this topology works for that service; it does not prove that an Iranian ingress is necessary for Karen Lab.
 
 ```
 Android client
@@ -72,4 +72,4 @@ Design rules:
 - Do not introduce a normal HTTP CDN in the first reproduction. Raw Shadowsocks/TCP is not an HTTP payload and an ordinary HTTP CDN is a different topology.
 - If the Iran-to-Hetzner direct server path is unreliable, the next fallback is a persistent server-to-server tunnel/reverse path; do not change the client protocol first.
 
-This architecture is intentionally minimal so the first-hop topology matches the known-working profile while preserving the existing Hetzner server as the foreign egress.
+Do not purchase or provision an Iranian VPS on the basis of this reference alone. Before selecting an architecture, compare at least one known-working profile that reaches a foreign server directly (preferably the user's working REALITY/direct-IP example). The project architecture should be selected from the common requirements of multiple working topologies, not copied from a single reference.
