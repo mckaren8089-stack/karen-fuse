@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "generated_at": "2026-10-01T18:03:47Z",
+  "generated_at": "2026-10-01T18:25:15Z",
   "sources": {
     "alanchand": {
       "name": "الان چند",
       "ok": true,
-      "gold18_toman": 25762960,
+      "gold18_toman": 25716790,
       "usd_toman": 258600,
       "usd_buy_toman": 257300,
       "usd_sell_toman": 259900,
-      "updated_at": "2026-10-01T18:03:39Z",
+      "updated_at": "2026-10-01T18:25:08Z",
       "error": null
     },
     "tgju": {
@@ -19,7 +19,7 @@
       "usd_toman": 258465,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-01 21:33:29",
+      "updated_at": "2026-10-01 21:55:06",
       "error": null
     },
     "estjt": {
@@ -29,7 +29,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-01T18:03:44Z",
+      "updated_at": "2026-10-01T18:25:13Z",
       "error": null
     },
     "pashizi": {
@@ -39,7 +39,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-01T18:03:44Z",
+      "updated_at": "2026-10-01T18:25:13Z",
       "error": "HTTPError: HTTP Error 403: Forbidden"
     },
     "zarscan": {
@@ -49,7 +49,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-01T18:03:44Z",
+      "updated_at": "2026-10-01T18:25:13Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "geram18": {
@@ -59,7 +59,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-01T18:03:45Z",
+      "updated_at": "2026-10-01T18:25:14Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "navasan_widget": {
@@ -69,16 +69,16 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-01T18:03:47Z",
+      "updated_at": "2026-10-01T18:25:15Z",
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
   },
   "consensus": {
-    "gold18_toman": 25730700,
+    "gold18_toman": 25716790,
     "usd_toman": 258532
   },
   "spread": {
-    "gold_pct": 0.2665,
+    "gold_pct": 0.1412,
     "usd_pct": 0.0522
   }
 }
