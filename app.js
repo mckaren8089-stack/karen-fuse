@@ -1,12 +1,15 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.3.0';
+  const VERSION = '0.3.1';
   const STORE_KEY = 'karenFuse.v03';
   const LEGACY_KEYS = ['karenFuse.v02'];
   const RAW_BASE = 'https://raw.githubusercontent.com/mckaren8089-stack/karen-fuse/main/data';
   const EXPECTED_DATA_SECONDS = 300;
-  const POLL_MS = 20_000;
+  const LATEST_POLL_MS = 60_000;
+  const HISTORY_POLL_MS = 315_000;
+  const LOCAL_HISTORY_LIMIT = 1200;
+  const MANUAL_REF_TTL_MS = 60 * 60 * 1000;
 
   const nf = new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 0 });
   const pf = new Intl.NumberFormat('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -28,6 +31,7 @@
     version: VERSION,
     calibrations: [],
     manualReference: null,
+    manualReferenceAt: null,
     settings: { tradeCapital: 15000000, feePct: 0.5, dropPct: 2 },
     lastMarket: null,
     marketHistory: []
@@ -92,8 +96,17 @@
   }
   function escapeHtml(s){ return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 
+  function manualRefState(){
+    const value=Number(state.manualReference);
+    if(!(value>0)) return {value:null,active:false,expired:false,ageMs:Infinity};
+    const at=Number(state.manualReferenceAt||0);
+    const ageMs=at>0?Math.max(0,Date.now()-at):Infinity;
+    return {value,active:ageMs<=MANUAL_REF_TTL_MS,expired:ageMs>MANUAL_REF_TTL_MS,ageMs};
+  }
+
   function refPrice(){
-    if(Number(state.manualReference)>0) return Number(state.manualReference);
+    const manual=manualRefState();
+    if(manual.active) return manual.value;
     return Number(latest?.consensus?.gold18_toman || 0) || null;
   }
 
@@ -129,26 +142,43 @@
     return r.json();
   }
 
-  async function refreshMarket(){
+  async function refreshMarket({includeHistory=false}={}){
     if(refreshBusy) return;
     refreshBusy=true;
     if(els.refreshMarket) els.refreshMarket.textContent='…';
-    try{
-      const [l,h]=await Promise.all([fetchJson(`${RAW_BASE}/latest.json`),fetchJson(`${RAW_BASE}/history.json`)]);
-      latest=l;
-      history=Array.isArray(h?.points)?h.points:[];
-      state.lastMarket=l;
-      state.marketHistory=history.slice(-5000);
-      save();
-    }catch(err){
+
+    const latestTask=fetchJson(`${RAW_BASE}/latest.json`);
+    const historyTask=includeHistory?fetchJson(`${RAW_BASE}/history.json`):Promise.resolve(null);
+    const [latestResult,historyResult]=await Promise.allSettled([latestTask,historyTask]);
+    let changed=false;
+
+    if(latestResult.status==='fulfilled'){
+      latest=latestResult.value;
+      state.lastMarket=latest;
+      changed=true;
+    }else{
       latest=state.lastMarket;
-      history=Array.isArray(state.marketHistory)?state.marketHistory:[];
-      console.warn('market refresh failed',err);
-    }finally{
-      refreshBusy=false;
-      if(els.refreshMarket) els.refreshMarket.textContent='↻';
-      renderAll();
+      console.warn('latest refresh failed',latestResult.reason);
     }
+
+    if(includeHistory){
+      if(historyResult.status==='fulfilled'){
+        const points=Array.isArray(historyResult.value?.points)?historyResult.value.points:[];
+        history=points;
+        state.marketHistory=points.slice(-LOCAL_HISTORY_LIMIT);
+        changed=true;
+      }else{
+        history=Array.isArray(state.marketHistory)?state.marketHistory:[];
+        console.warn('history refresh failed',historyResult.reason);
+      }
+    }else if(!Array.isArray(history) || !history.length){
+      history=Array.isArray(state.marketHistory)?state.marketHistory:[];
+    }
+
+    if(changed) save();
+    refreshBusy=false;
+    if(els.refreshMarket) els.refreshMarket.textContent='↻';
+    renderAll();
   }
 
   function sourceNumbers(asset){
@@ -172,8 +202,8 @@
   function moveFromHistory(asset){
     const arr=recentPoints(asset,1);
     if(arr.length<2) return NaN;
-    const prev=arr[arr.length-2].v, last=arr[arr.length-1].v;
-    return prev?((last/prev)-1)*100:NaN;
+    const first=arr[0].v, last=arr[arr.length-1].v;
+    return first?((last/first)-1)*100:NaN;
   }
 
   function renderOverview(){
@@ -203,6 +233,7 @@
   function setMove(el,v){
     el.className='move-badge ' + (!Number.isFinite(v)?'neutral':v>0?'pos':v<0?'neg':'neutral');
     el.textContent=Number.isFinite(v)?signedPct(v):'بدون تغییر';
+    el.title='تغییر نسبت به نخستین دادهٔ موجود در یک ساعت اخیر';
   }
 
   function updateFuse(ts){
@@ -350,9 +381,16 @@
   }
 
   function autoFillCalibrationReference(){
-    const r=refPrice();
+    const r=refPrice(), manual=manualRefState();
     els.bluReferenceDisplay.textContent=r?money(r)+' تومان':'—';
-    els.referenceMode.textContent=state.manualReference?'دستی':'اجماع';
+    if(manual.active){
+      const mins=Math.max(1,Math.round(manual.ageMs/60000));
+      els.referenceMode.textContent=`دستی • ${nf.format(mins)}د`;
+    }else if(manual.expired){
+      els.referenceMode.textContent='دستی منقضی • اجماع';
+    }else{
+      els.referenceMode.textContent='اجماع';
+    }
     if(r && (!calRefTouched || !num(els.calRef.value))) els.calRef.value=Math.round(r);
   }
 
@@ -403,7 +441,7 @@
     renderOverview();renderSources();drawMarketChart();renderBlu();renderScenario();
   }
 
-  els.refreshMarket.addEventListener('click',refreshMarket);
+  els.refreshMarket.addEventListener('click',()=>refreshMarket({includeHistory:true}));
   document.querySelectorAll('.asset-btn').forEach(btn=>btn.addEventListener('click',()=>{
     document.querySelectorAll('.asset-btn').forEach(b=>b.classList.toggle('active',b===btn));
     chartAsset=btn.dataset.asset;drawMarketChart();
@@ -414,11 +452,38 @@
     chartHours=Number(btn.dataset.hours);drawMarketChart();
   }));
 
+  function validateCalibration(ref,buy,sell,{interactive=false}={}){
+    const plausible=v=>Number.isFinite(v)&&v>=1_000_000&&v<=100_000_000;
+    if(!plausible(ref)||!plausible(buy)||!plausible(sell)) return 'اعداد واردشده خارج از محدودهٔ معتبر طلای ۱۸ عیار هستند.';
+    if(buy<sell) return 'قیمت خرید بلو نباید از قیمت فروش بلو کمتر باشد؛ جای دو عدد را بررسی کن.';
+    const maxDeviation=Math.max(Math.abs(buy/ref-1),Math.abs(sell/ref-1))*100;
+    if(maxDeviation>10) return 'اختلاف قیمت بلو با مرجع بیش از ۱۰٪ است؛ احتمال خطای ورود عدد زیاد است.';
+    if(interactive && maxDeviation>3){
+      const ok=confirm(`اختلاف یکی از قیمت‌ها با مرجع ${pf.format(maxDeviation)}٪ است. از ثبت این نمونه مطمئنی؟`);
+      if(!ok) return 'ثبت نمونه لغو شد.';
+    }
+    return '';
+  }
+
+  function normalizeCalibration(raw){
+    const ref=Number(raw?.ref),buy=Number(raw?.buy),sell=Number(raw?.sell),at=Number(raw?.at);
+    if(validateCalibration(ref,buy,sell)) return null;
+    return {
+      at:Number.isFinite(at)&&at>0?at:Date.now(),
+      ref,buy,sell,
+      basisBuy:(buy/ref-1)*100,
+      basisSell:(sell/ref-1)*100
+    };
+  }
+
   els.calRef.addEventListener('input',()=>{calRefTouched=true;});
   els.saveCalibration.addEventListener('click',()=>{
     const ref=num(els.calRef.value),buy=num(els.calBuy.value),sell=num(els.calSell.value);
     if(!(ref>0&&buy>0&&sell>0)){els.calibrationResult.textContent='مرجع، خرید بلو و فروش بلو را کامل وارد کن.';return;}
-    const row={at:Date.now(),ref,buy,sell,basisBuy:(buy/ref-1)*100,basisSell:(sell/ref-1)*100};
+    const issue=validateCalibration(ref,buy,sell,{interactive:true});
+    if(issue){els.calibrationResult.textContent=issue;return;}
+    const row=normalizeCalibration({at:Date.now(),ref,buy,sell});
+    if(!row){els.calibrationResult.textContent='نمونه معتبر نیست.';return;}
     state.calibrations.push(row);
     if(state.calibrations.length>1000) state.calibrations=state.calibrations.slice(-1000);
     save();
@@ -427,10 +492,17 @@
   });
 
   els.setManualRef.addEventListener('click',()=>{
-    const v=num(els.manualRef.value);if(v>0){state.manualReference=Math.round(v);save();calRefTouched=false;renderBlu();renderScenario();}
+    const v=num(els.manualRef.value);
+    if(v>=1_000_000&&v<=100_000_000){
+      state.manualReference=Math.round(v);
+      state.manualReferenceAt=Date.now();
+      save();calRefTouched=false;renderBlu();renderScenario();
+    }else{
+      alert('مرجع دستی معتبر نیست.');
+    }
   });
   els.clearManualRef.addEventListener('click',()=>{
-    state.manualReference=null;els.manualRef.value='';save();calRefTouched=false;renderBlu();renderScenario();
+    state.manualReference=null;state.manualReferenceAt=null;els.manualRef.value='';save();calRefTouched=false;renderBlu();renderScenario();
   });
 
   ['tradeCapital','feePct','dropPct'].forEach(id=>els[id].addEventListener('input',()=>{
@@ -447,8 +519,16 @@
   els.exportJson.addEventListener('click',()=>download(`karen-fuse-blu-${Date.now()}.json`,JSON.stringify({version:VERSION,calibrations:state.calibrations},null,2),'application/json'));
   els.importJson.addEventListener('change',async e=>{
     const file=e.target.files?.[0];if(!file)return;
-    try{const j=JSON.parse(await file.text());if(!Array.isArray(j.calibrations))throw new Error('bad');state.calibrations=j.calibrations.slice(-1000);save();renderBlu();renderScenario();}
-    catch{alert('فایل معتبر نیست.');}
+    try{
+      const j=JSON.parse(await file.text());
+      if(!Array.isArray(j.calibrations)) throw new Error('bad');
+      const normalized=j.calibrations.map(normalizeCalibration);
+      const invalid=normalized.filter(x=>!x).length;
+      if(invalid) throw new Error(`${invalid} نمونهٔ نامعتبر در فایل وجود دارد`);
+      state.calibrations=normalized.slice(-1000);
+      save();renderBlu();renderScenario();
+    }catch(err){alert(err?.message||'فایل معتبر نیست.');}
+    finally{e.target.value='';}
   });
   els.clearData.addEventListener('click',()=>{
     if(confirm('همه نمونه‌های بلو پاک شوند؟')){state.calibrations=[];save();renderBlu();renderScenario();}
@@ -458,7 +538,7 @@
     els.netStatus.textContent=navigator.onLine?'آنلاین':'آفلاین';
     els.netStatus.classList.toggle('neg',!navigator.onLine);
   }
-  window.addEventListener('online',()=>{updateNet();refreshMarket();});
+  window.addEventListener('online',()=>{updateNet();refreshMarket({includeHistory:true});});
   window.addEventListener('offline',updateNet);
   window.addEventListener('resize',()=>{drawMarketChart();drawBasisChart();drawSpark(els.goldSpark,recentPoints('gold',1),'gold');});
 
@@ -472,8 +552,9 @@
   hydrate();
   updateNet();
   renderAll();
-  refreshMarket();
-  setInterval(refreshMarket,POLL_MS);
+  refreshMarket({includeHistory:true});
+  setInterval(()=>refreshMarket({includeHistory:false}),LATEST_POLL_MS);
+  setInterval(()=>refreshMarket({includeHistory:true}),HISTORY_POLL_MS);
   setInterval(()=>{ if(latest?.generated_at){ els.dataAge.textContent=`${ageLabel(latest.generated_at)} پیش`; updateFuse(latest.generated_at); } },10_000);
 
   if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
