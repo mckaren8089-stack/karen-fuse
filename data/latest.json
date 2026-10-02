@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "generated_at": "2026-10-02T07:04:57Z",
+  "generated_at": "2026-10-02T07:23:00Z",
   "sources": {
     "alanchand": {
       "name": "الان چند",
       "ok": true,
-      "gold18_toman": 25682160,
+      "gold18_toman": 25693710,
       "usd_toman": 258600,
       "usd_buy_toman": 257300,
       "usd_sell_toman": 259900,
-      "updated_at": "2026-10-02T07:04:50Z",
+      "updated_at": "2026-10-02T07:22:53Z",
       "error": null
     },
     "tgju": {
@@ -19,7 +19,7 @@
       "usd_toman": 258465,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02 10:34:40",
+      "updated_at": "2026-10-02 10:52:31",
       "error": null
     },
     "estjt": {
@@ -29,7 +29,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T07:04:54Z",
+      "updated_at": "2026-10-02T07:22:57Z",
       "error": null
     },
     "pashizi": {
@@ -39,7 +39,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T07:04:54Z",
+      "updated_at": "2026-10-02T07:22:57Z",
       "error": "HTTPError: HTTP Error 403: Forbidden"
     },
     "zarscan": {
@@ -49,7 +49,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T07:04:55Z",
+      "updated_at": "2026-10-02T07:22:58Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "geram18": {
@@ -59,7 +59,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T07:04:56Z",
+      "updated_at": "2026-10-02T07:22:58Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "navasan_widget": {
@@ -69,7 +69,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T07:04:57Z",
+      "updated_at": "2026-10-02T07:23:00Z",
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
   },
@@ -78,7 +78,7 @@
     "usd_toman": 258532
   },
   "spread": {
-    "gold_pct": 0.1889,
+    "gold_pct": 0.144,
     "usd_pct": 0.0522
   }
 }
