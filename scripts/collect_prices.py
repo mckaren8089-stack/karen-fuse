@@ -12,10 +12,12 @@ import html
 import json
 import math
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from statistics import median
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -57,7 +59,8 @@ def valid_usd(v) -> bool:
     return v is not None and 10_000 <= v <= 1_000_000
 
 
-def source_result(name: str, gold=None, usd=None, updated_at=None, error=None, usd_buy=None, usd_sell=None):
+def source_result(name: str, gold=None, usd=None, updated_at=None, error=None, usd_buy=None, usd_sell=None, source_updated_at=None):
+    collected_at = now_iso()
     return {
         "name": name,
         "ok": bool((valid_gold(gold) or valid_usd(usd) or valid_usd(usd_buy) or valid_usd(usd_sell)) and not error),
@@ -65,9 +68,22 @@ def source_result(name: str, gold=None, usd=None, updated_at=None, error=None, u
         "usd_toman": round(usd) if valid_usd(usd) else None,
         "usd_buy_toman": round(usd_buy) if valid_usd(usd_buy) else None,
         "usd_sell_toman": round(usd_sell) if valid_usd(usd_sell) else None,
-        "updated_at": updated_at or now_iso(),
+        "updated_at": collected_at,
+        "source_updated_at": source_updated_at or updated_at,
         "error": error,
     }
+
+
+def tgju_timestamp_fresh(value: str | None, max_age_minutes: int = 30) -> bool:
+    if not value:
+        return True
+    try:
+        dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("Asia/Tehran"))
+        age = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds() / 60
+        return -5 <= age <= max_age_minutes
+    except Exception:
+        # A provider format change must not turn into a false stale-data rejection.
+        return True
 
 
 def collect_tgju():
@@ -85,7 +101,9 @@ def collect_tgju():
                 n /= 10
             values[key] = n
             updated = (resp.get("info") or {}).get("datetime") or updated
-        return source_result("TGJU", values.get("gold"), values.get("usd"), updated_at=updated or now_iso())
+        if updated and not tgju_timestamp_fresh(updated):
+            return source_result("TGJU", error=f"provider timestamp is stale: {updated}", source_updated_at=updated)
+        return source_result("TGJU", values.get("gold"), values.get("usd"), source_updated_at=updated)
     except Exception as e:
         return source_result("TGJU", error=f"{type(e).__name__}: {e}")
 
@@ -276,9 +294,28 @@ def spread_pct(values):
     return round((max(vals) - min(vals)) / med * 100, 4) if med else None
 
 
-def consensus(values):
+def consensus(values, max_deviation_pct: float = 3.0):
     vals = [float(v) for v in values if v is not None and float(v) > 0]
-    return round(median(vals)) if vals else None
+    if not vals:
+        return None
+    center = median(vals)
+    if len(vals) >= 3 and center:
+        inliers = [v for v in vals if abs(v - center) / center * 100 <= max_deviation_pct]
+        if inliers:
+            return round(median(inliers))
+    return round(center)
+
+
+def confidence(values):
+    vals = [float(v) for v in values if v is not None and float(v) > 0]
+    spread = spread_pct(vals)
+    if len(vals) >= 3 and spread is not None and spread <= 1.5:
+        level = "high"
+    elif len(vals) >= 2 and spread is not None and spread <= 3.0:
+        level = "medium"
+    else:
+        level = "low"
+    return {"level": level, "source_count": len(vals), "spread_pct": spread}
 
 
 def load_json(path: Path, default):
@@ -294,15 +331,26 @@ def write_json(path: Path, data):
 
 
 def collect():
-    sources = {
-        "alanchand": collect_alanchand(),
-        "tgju": collect_tgju(),
-        "estjt": collect_estjt(),
-        "pashizi": collect_pashizi(),
-        "zarscan": collect_zarscan(),
-        "geram18": collect_geram18(),
-        "navasan_widget": collect_navasan_widget(),
+    collectors = {
+        "alanchand": collect_alanchand,
+        "tgju": collect_tgju,
+        "estjt": collect_estjt,
+        "pashizi": collect_pashizi,
+        "zarscan": collect_zarscan,
+        "geram18": collect_geram18,
+        "navasan_widget": collect_navasan_widget,
     }
+    unordered = {}
+    with ThreadPoolExecutor(max_workers=len(collectors)) as pool:
+        futures = {pool.submit(fn): key for key, fn in collectors.items()}
+        for future in as_completed(futures):
+            key = futures[future]
+            try:
+                unordered[key] = future.result()
+            except Exception as e:
+                unordered[key] = source_result(key, error=f"{type(e).__name__}: {e}")
+    sources = {key: unordered[key] for key in collectors}
+
     golds = [s.get("gold18_toman") for s in sources.values() if s.get("ok")]
     usds = [s.get("usd_toman") for s in sources.values() if s.get("ok")]
     generated = now_iso()
@@ -312,6 +360,7 @@ def collect():
         "sources": sources,
         "consensus": {"gold18_toman": consensus(golds), "usd_toman": consensus(usds)},
         "spread": {"gold_pct": spread_pct(golds), "usd_pct": spread_pct(usds)},
+        "quality": {"gold": confidence(golds), "usd": confidence(usds)},
     }
     write_json(LATEST, latest)
 
@@ -347,6 +396,7 @@ def self_test():
     sample = "اتحادیه طلا تهران طلا ۱۸ عیار ۲۴٫۴۲۴٫۱۰۰ سکه"
     assert extract_near(sample, ["طلا ۱۸ عیار"], valid_gold) == 24424100
     assert consensus([10, 12, 100]) == 12
+    assert consensus([100, 101, 150]) == 100
     sample_alanchand = "دلار آمریکا ۲۴۳,۰۵۰ ۲۴۵,۵۰۰ - گرم طلای 18 عیار ۲۴,۵۰۴,۸۲۰ تومان"
     assert extract_values_after(sample_alanchand, "دلار آمریکا", valid_usd, limit=2) == [243050, 245500]
     assert extract_values_after(sample_alanchand, "گرم طلای 18 عیار", valid_gold, limit=1) == [24504820]
