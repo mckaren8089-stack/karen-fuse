@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "generated_at": "2026-10-02T13:07:21Z",
+  "generated_at": "2026-10-02T13:25:30Z",
   "sources": {
     "alanchand": {
       "name": "الان چند",
       "ok": true,
-      "gold18_toman": 26039980,
-      "usd_toman": 258600,
-      "usd_buy_toman": 257300,
-      "usd_sell_toman": 259900,
-      "updated_at": "2026-10-02T13:07:14Z",
+      "gold18_toman": 26005360,
+      "usd_toman": 260900,
+      "usd_buy_toman": 259600,
+      "usd_sell_toman": 262200,
+      "updated_at": "2026-10-02T13:25:20Z",
       "error": null
     },
     "tgju": {
@@ -19,17 +19,17 @@
       "usd_toman": 258465,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02 16:37:04",
+      "updated_at": "2026-10-02 16:55:06",
       "error": null
     },
     "estjt": {
       "name": "اتحادیه طلا تهران",
       "ok": true,
-      "gold18_toman": 26090800,
+      "gold18_toman": 26058500,
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T13:07:18Z",
+      "updated_at": "2026-10-02T13:25:27Z",
       "error": null
     },
     "pashizi": {
@@ -39,7 +39,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T13:07:18Z",
+      "updated_at": "2026-10-02T13:25:27Z",
       "error": "HTTPError: HTTP Error 403: Forbidden"
     },
     "zarscan": {
@@ -49,7 +49,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T13:07:18Z",
+      "updated_at": "2026-10-02T13:25:27Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "geram18": {
@@ -59,7 +59,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T13:07:19Z",
+      "updated_at": "2026-10-02T13:25:28Z",
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "navasan_widget": {
@@ -69,16 +69,16 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-02T13:07:21Z",
+      "updated_at": "2026-10-02T13:25:30Z",
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
   },
   "consensus": {
-    "gold18_toman": 26039980,
-    "usd_toman": 258532
+    "gold18_toman": 26005360,
+    "usd_toman": 259682
   },
   "spread": {
-    "gold_pct": 1.5223,
-    "usd_pct": 0.0522
+    "gold_pct": 1.4001,
+    "usd_pct": 0.9377
   }
 }
