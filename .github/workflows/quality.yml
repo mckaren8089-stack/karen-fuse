@@ -46,3 +46,9 @@ jobs:
       - name: Probe XAU and TGJU historical sources
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         run: python scripts/collect_prices.py --probe
+      - name: Run collector integration
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        run: python scripts/collect_prices.py
+      - name: Validate generated data contract
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        run: python scripts/test_data_contract.py
