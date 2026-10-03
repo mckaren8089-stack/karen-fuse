@@ -631,13 +631,16 @@ def fetch_tgju_daily(slug: str, asset: str, length: int = 500):
         date = str(row[6]).replace("/", "-")
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
             continue
+        change = parse_decimal(clean_change_cell(row[4]))
+        if asset != "xau" and change is not None:
+            change /= 10
         out.append({
             "date": date,
             "open": round(values[0], 2 if asset == "xau" else 0),
             "low": round(values[1], 2 if asset == "xau" else 0),
             "high": round(values[2], 2 if asset == "xau" else 0),
             "close": round(values[3], 2 if asset == "xau" else 0),
-            "change": parse_decimal(clean_change_cell(row[4])),
+            "change": round(change, 2 if asset == "xau" else 0) if change is not None else None,
             "change_pct": parse_decimal(clean_change_cell(row[5])),
         })
     out.sort(key=lambda r: r["date"])
@@ -834,21 +837,35 @@ def self_test():
 def probe():
     gold_api = collect_gold_api()
     tgju_xau = collect_tgju_xau()
-    history_rows = []
-    history_error = None
-    try:
-        history_rows = fetch_tgju_daily("geram18", "gold", length=10)
-    except Exception as e:
-        history_error = f"{type(e).__name__}: {e}"
+    history = {}
+    specs = {
+        "gold": ("geram18", "gold"),
+        "usd": ("price_dollar_rl", "usd"),
+        "xau": ("ons", "xau"),
+    }
+    for key, (slug, asset) in specs.items():
+        try:
+            rows = fetch_tgju_daily(slug, asset, length=10)
+            history[key] = {
+                "rows": len(rows),
+                "error": None,
+                "last": rows[-1] if rows else None,
+            }
+        except Exception as e:
+            history[key] = {
+                "rows": 0,
+                "error": f"{type(e).__name__}: {e}",
+                "last": None,
+            }
     report = {
         "gold_api": gold_api,
         "tgju_xau": tgju_xau,
-        "tgju_history_rows": len(history_rows),
-        "tgju_history_error": history_error,
-        "tgju_history_last": history_rows[-1] if history_rows else None,
+        "tgju_history": history,
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0 if gold_api.get("xau_status") == STATUS_OK and history_rows else 3
+    history_ok = all(history[k]["rows"] > 0 for k in specs)
+    xau_ok = gold_api.get("xau_status") == STATUS_OK and tgju_xau.get("xau_status") == STATUS_OK
+    return 0 if history_ok and xau_ok else 3
 
 
 def main():
