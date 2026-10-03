@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
   <meta name="theme-color" content="#07111d" />
-  <meta name="description" content="Karen Fuse — داشبورد چندمنبعی طلای ۱۸ عیار، دلار و کالیبراسیون بلو" />
+  <meta name="description" content="Karen Fuse — داشبورد چندمنبعی طلای ۱۸ عیار، دلار، اونس جهانی و کالیبراسیون Blu" />
   <title>Karen Fuse</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -15,8 +15,8 @@
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"></span>
       <div>
-        <div class="brand-line"><strong>Karen Fuse</strong><span class="version">V0.3.1</span></div>
-        <span class="brand-sub">نبض لحظه‌ای بازار طلا و دلار</span>
+        <div class="brand-line"><strong>Karen Fuse</strong><span class="version">V0.4</span></div>
+        <span class="brand-sub">نبض چندمنبعی بازار طلا، دلار و اونس</span>
       </div>
     </div>
     <div class="header-status">
@@ -48,7 +48,7 @@
         <article class="panel usd-panel">
           <div class="row-between">
             <div>
-              <span class="kicker">دلار آزاد</span>
+              <span class="kicker">دلار آزاد • اجماع</span>
               <div id="usdPrice" class="secondary-price">—</div>
             </div>
             <div id="usdMove" class="move-badge neutral">—</div>
@@ -60,15 +60,22 @@
           <div class="mini-note" id="usdSourceNote">—</div>
         </article>
 
+        <article class="panel xau-panel">
+          <div>
+            <span class="kicker">XAU/USD • اونس جهانی</span>
+            <div id="xauPrice" class="secondary-price xau-price">—</div>
+            <span class="unit">دلار / اونس تروا</span>
+          </div>
+          <div class="mini-note" id="xauSourceNote">—</div>
+        </article>
+
         <article class="panel fuse-panel">
           <div class="fuse-visual">
-            <div id="fuseRing" class="fuse-ring">
-              <span id="fuseMinutes">—</span>
-            </div>
+            <div id="fuseRing" class="fuse-ring"><span id="fuseMinutes">—</span></div>
             <div>
               <span class="kicker">فیوز بازار</span>
               <strong id="fuseState">در حال همگام‌سازی</strong>
-              <p id="fuseDetail">تازگی داده و هماهنگی منابع</p>
+              <p id="fuseDetail">تازگی Snapshot و فاصله زمانی جمع‌آوری</p>
             </div>
           </div>
           <div class="pulse-line"><span></span></div>
@@ -91,21 +98,31 @@
     <section class="panel chart-panel">
       <div class="section-title chart-head">
         <div>
-          <span class="kicker">روند بازار</span>
+          <span class="kicker">روند بازار • لمس کن و روی خط حرکت بده</span>
           <h2 id="chartTitle">طلای ۱۸ عیار</h2>
         </div>
-        <div class="asset-switch" role="tablist">
+        <div class="asset-switch" role="tablist" aria-label="دارایی نمودار">
           <button class="asset-btn active" data-asset="gold" type="button">طلا</button>
           <button class="asset-btn" data-asset="usd" type="button">دلار</button>
+          <button class="asset-btn" data-asset="xau" type="button">اونس</button>
         </div>
       </div>
 
       <div class="range-bar" id="rangeBar">
-        <button data-hours="1" class="range-btn active" type="button">۱س</button>
+        <button data-hours="1" class="range-btn" type="button">۱س</button>
         <button data-hours="6" class="range-btn" type="button">۶س</button>
-        <button data-hours="24" class="range-btn" type="button">۲۴س</button>
+        <button data-hours="24" class="range-btn active" type="button">۲۴س</button>
+        <button data-hours="72" class="range-btn" type="button">۳روز</button>
         <button data-hours="168" class="range-btn" type="button">۷روز</button>
         <button data-hours="720" class="range-btn" type="button">۳۰روز</button>
+        <button data-hours="2160" class="range-btn" type="button">۹۰روز</button>
+        <button data-hours="8760" class="range-btn" type="button">۱سال</button>
+      </div>
+
+      <div class="chart-lineage">
+        <span>منبع نمودار: <strong id="chartSource">—</strong></span>
+        <span>آخرین نقطه: <strong id="chartLastPoint">—</strong></span>
+        <span>وضعیت پیوستگی: <strong id="chartGap">—</strong></span>
       </div>
 
       <div class="chart-stats">
@@ -116,17 +133,19 @@
       </div>
 
       <div class="market-chart-wrap">
-        <canvas id="marketChart"></canvas>
-        <div id="chartEmpty" class="chart-empty" hidden>برای این بازه هنوز دادهٔ کافی جمع نشده است.</div>
+        <canvas id="marketChart" aria-label="نمودار تعاملی بازار"></canvas>
+        <div id="chartTooltip" class="chart-tooltip" hidden></div>
+        <div id="chartEmpty" class="chart-empty" hidden>برای این بازه هنوز دادهٔ کافی در دسترس نیست.</div>
       </div>
+      <div class="chart-help">روی نمودار لمس کن و بکش؛ قیمت و زمان نزدیک‌ترین نقطه نشان داده می‌شود. شکاف‌های بزرگ داده به‌صورت خط قطع‌شده باقی می‌مانند و با عدد ساختگی پر نمی‌شوند.</div>
     </section>
 
     <section class="blu-grid">
       <article class="panel blu-panel">
         <div class="section-title">
           <div>
-            <span class="kicker">کالیبراسیون بلو</span>
-            <h2>قیمت واقعی بلو را ثبت کن</h2>
+            <span class="kicker">کالیبراسیون Blu</span>
+            <h2>قیمت واقعی Blu را با خطای کمتر ثبت کن</h2>
           </div>
           <span id="sampleCount" class="sample-pill">۰ نمونه</span>
         </div>
@@ -136,26 +155,30 @@
           <span id="referenceMode" class="ref-mode">اجماع</span>
         </div>
 
-        <div class="input-grid">
+        <div class="blu-input-grid">
           <label>مرجع طلا
-            <input id="calRef" inputmode="numeric" placeholder="خودکار" />
+            <input id="calRef" class="blu-money-input" inputmode="numeric" placeholder="خودکار" />
           </label>
-          <label>خرید بلو
-            <input id="calBuy" inputmode="numeric" placeholder="قیمت خرید" />
+          <label>خرید Blu
+            <input id="calBuy" class="blu-money-input" inputmode="numeric" placeholder="مثلاً ۲۶٬۵۰۰٬۰۰۰" />
           </label>
-          <label>فروش بلو
-            <input id="calSell" inputmode="numeric" placeholder="قیمت فروش" />
+          <label>فروش Blu
+            <input id="calSell" class="blu-money-input" inputmode="numeric" placeholder="مثلاً ۲۶٬۳۰۰٬۰۰۰" />
+          </label>
+          <label class="blu-note-field">یادداشت اختیاری
+            <input id="calNote" maxlength="280" placeholder="مثلاً ساعت مشاهده یا شرایط خاص" />
           </label>
         </div>
-        <button id="saveCalibration" class="primary-btn" type="button">ثبت نمونه بلو</button>
-        <div id="calibrationResult" class="form-hint">مرجع بازار به‌صورت خودکار وارد می‌شود.</div>
+        <div id="calibrationPreview" class="form-hint">قبل از ثبت، اختلاف خرید و فروش با مرجع اینجا دیده می‌شود.</div>
+        <button id="saveCalibration" class="primary-btn" type="button">ثبت نمونه Blu</button>
+        <div id="calibrationResult" class="form-hint">ثبت دستی لازم نیست هر دقیقه انجام شود؛ نمونه‌های واقعی با وزن بیشتر برای نمونه‌های جدید استفاده می‌شوند.</div>
       </article>
 
       <article class="panel estimate-panel">
         <div class="section-title">
           <div>
-            <span class="kicker">برآورد بلو</span>
-            <h2>فاصلهٔ بلو با بازار</h2>
+            <span class="kicker">برآورد Blu</span>
+            <h2>فاصلهٔ Blu با بازار</h2>
           </div>
         </div>
         <div class="estimate-main">
@@ -170,11 +193,61 @@
       </article>
     </section>
 
+    <section class="panel calculator-panel">
+      <div class="section-title">
+        <div>
+          <span class="kicker">پیش‌فاکتور لحظه‌ای</span>
+          <h2>تومان ↔ طلا با کارمزد واقعی</h2>
+        </div>
+        <div class="trade-switch" role="tablist">
+          <button id="calcBuy" class="trade-btn active" type="button">خرید</button>
+          <button id="calcSell" class="trade-btn" type="button">فروش</button>
+        </div>
+      </div>
+
+      <div class="calculator-controls">
+        <label>مرجع قیمت
+          <select id="calcReference">
+            <option value="market">اجماع بازار</option>
+            <option value="blu">تخمین Blu</option>
+          </select>
+        </label>
+        <label>کارمزد (%)
+          <input id="calcFee" inputmode="decimal" value="0.5" />
+        </label>
+        <label>مبلغ تومان
+          <input id="calcToman" class="calc-big-input" inputmode="numeric" value="۵۰٬۰۰۰٬۰۰۰" />
+        </label>
+        <label>مقدار طلا (گرم)
+          <input id="calcGold" class="calc-big-input" inputmode="decimal" value="۱" />
+        </label>
+      </div>
+      <div id="calcReferenceNote" class="form-hint">—</div>
+
+      <div class="invoice-card">
+        <div class="invoice-title">Estimate / پیش‌فاکتور</div>
+        <div class="invoice-grid">
+          <div><span>جهت</span><strong id="invoiceDirection">—</strong></div>
+          <div><span>قیمت مرجع ۱۸ عیار</span><strong id="invoiceReference">—</strong></div>
+          <div><span>ورودی</span><strong id="invoiceInput">—</strong></div>
+          <div><span>نتیجه ناخالص</span><strong id="invoiceGross">—</strong></div>
+          <div><span>درصد کارمزد</span><strong id="invoiceFeePct">—</strong></div>
+          <div><span>مبلغ کارمزد</span><strong id="invoiceFeeAmount">—</strong></div>
+          <div class="invoice-final"><span>نتیجه نهایی تخمینی</span><strong id="invoiceFinal">—</strong></div>
+          <div><span>زمان مرجع</span><strong id="invoiceTimestamp">—</strong></div>
+          <div><span>تعداد منابع طلا</span><strong id="invoiceSourceCount">—</strong></div>
+          <div><span>اختلاف منابع</span><strong id="invoiceSpread">—</strong></div>
+          <div><span>کیفیت داده</span><strong id="invoiceQuality">—</strong></div>
+        </div>
+      </div>
+      <div class="calculator-help">هرکدام از «تومان» یا «گرم» را تغییر بده؛ فیلد دیگر بر اساس قیمت مرجع همان لحظه و کارمزد انتخابی محاسبه می‌شود.</div>
+    </section>
+
     <details class="panel utility-panel">
       <summary>ابزارهای تکمیلی و پشتیبان</summary>
       <div class="utility-content">
         <div class="utility-block">
-          <h3>مرجع دستی اضطراری</h3>
+          <h3>مرجع دستی اضطراری Blu</h3>
           <div class="inline-controls">
             <input id="manualRef" inputmode="numeric" placeholder="قیمت طلای ۱۸" />
             <button id="setManualRef" class="soft-btn" type="button">ثبت مرجع دستی</button>
@@ -183,22 +256,7 @@
         </div>
 
         <div class="utility-block">
-          <h3>سناریوی فروش → بازخرید</h3>
-          <div class="input-grid">
-            <label>مبلغ معامله<input id="tradeCapital" inputmode="numeric" value="15000000" /></label>
-            <label>کارمزد هر سمت (%)<input id="feePct" inputmode="decimal" value="0.5" /></label>
-            <label>افت فرضی (%)<input id="dropPct" inputmode="decimal" value="2" /></label>
-          </div>
-          <div class="scenario-stats">
-            <div><span>بعد از فروش</span><strong id="cashAfterSell">—</strong></div>
-            <div><span>هزینه بازخرید</span><strong id="costToRebuy">—</strong></div>
-            <div><span>سود/زیان</span><strong id="netTradeProfit">—</strong></div>
-            <div><span>بازده</span><strong id="netTradePct">—</strong></div>
-          </div>
-        </div>
-
-        <div class="utility-block">
-          <h3>نمونه‌های بلو</h3>
+          <h3>نمونه‌های Blu</h3>
           <div class="history-list" id="historyList"></div>
           <div class="backup-actions">
             <button id="exportJson" class="soft-btn" type="button">خروجی JSON</button>
@@ -210,7 +268,8 @@
     </details>
   </main>
 
-  <footer>دادهٔ بلو فقط روی دستگاه شما ذخیره می‌شود • Karen Fuse V0.3.1</footer>
+  <footer>دادهٔ Blu فقط روی دستگاه شما ذخیره می‌شود • Karen Fuse V0.4</footer>
+  <script src="calc.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
