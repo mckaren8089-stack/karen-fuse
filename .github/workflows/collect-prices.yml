@@ -20,7 +20,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -39,6 +39,8 @@ jobs:
           git config user.name "karen-fuse-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/latest.json data/history.json
+          if [ -f data/consensus_history.json ]; then git add data/consensus_history.json; fi
+          if [ -f data/tgju_history.json ]; then git add data/tgju_history.json; fi
           if git diff --cached --quiet; then
             echo "No data changes"
             exit 0
