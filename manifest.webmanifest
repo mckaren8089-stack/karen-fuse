@@ -1,7 +1,7 @@
 {
   "name": "Karen Fuse",
   "short_name": "Karen Fuse",
-  "description": "پایش چندمنبعی طلای ایران، دلار و کالیبراسیون قیمت بلو",
+  "description": "پایش چندمنبعی طلای ایران، دلار، اونس جهانی و ابزار تصمیم‌گیری خرید و فروش",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
