@@ -12,7 +12,10 @@ on:
       - "index.html"
       - "style.css"
       - "sw.js"
+      - "manifest.webmanifest"
       - "scripts/**"
+      - "docs/**"
+      - ".github/workflows/collect-prices.yml"
       - ".github/workflows/quality.yml"
 
 permissions:
@@ -38,6 +41,8 @@ jobs:
         run: python scripts/collect_prices.py --self-test
       - name: Run calculator tests
         run: node scripts/test_calc.js
+      - name: Validate UI contract
+        run: python scripts/test_ui_contract.py
       - name: Probe XAU and TGJU historical sources
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         run: python scripts/collect_prices.py --probe
