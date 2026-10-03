@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-03T02:34:52Z",
+  "generated_at": "2026-10-03T02:57:08Z",
   "sources": {
     "alanchand": {
       "name": "الان چند",
@@ -9,7 +9,7 @@
       "usd_toman": 262575,
       "usd_buy_toman": 261250,
       "usd_sell_toman": 263900,
-      "updated_at": "2026-10-03T02:34:50Z",
+      "updated_at": "2026-10-03T02:57:05Z",
       "source_updated_at": null,
       "error": null
     },
@@ -20,8 +20,8 @@
       "usd_toman": 258465,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T02:34:51Z",
-      "source_updated_at": "2026-10-03 06:04:38",
+      "updated_at": "2026-10-03T02:57:06Z",
+      "source_updated_at": "2026-10-03 06:27:05",
       "error": null
     },
     "estjt": {
@@ -31,7 +31,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T02:34:52Z",
+      "updated_at": "2026-10-03T02:57:07Z",
       "source_updated_at": null,
       "error": null
     },
@@ -42,7 +42,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T02:34:50Z",
+      "updated_at": "2026-10-03T02:57:05Z",
       "source_updated_at": null,
       "error": "HTTPError: HTTP Error 403: Forbidden"
     },
@@ -53,7 +53,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T02:34:50Z",
+      "updated_at": "2026-10-03T02:57:05Z",
       "source_updated_at": null,
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
@@ -64,7 +64,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T02:34:51Z",
+      "updated_at": "2026-10-03T02:57:08Z",
       "source_updated_at": null,
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
@@ -75,7 +75,7 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T02:34:50Z",
+      "updated_at": "2026-10-03T02:57:05Z",
       "source_updated_at": null,
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
