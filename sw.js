@@ -1,5 +1,5 @@
-const CACHE='karen-fuse-v0.3.1';
-const ASSETS=['./','./index.html','./style.css','./app.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='karen-fuse-v0.4.0';
+const ASSETS=['./','./index.html','./style.css','./calc.js','./app.js','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
@@ -37,6 +37,6 @@ self.addEventListener('fetch',event=>{
   const url=new URL(event.request.url);
   if(url.origin!==location.origin || event.request.method!=='GET') return;
   const isCore=event.request.mode==='navigate' ||
-    /\/(?:index\.html|app\.js|style\.css|manifest\.webmanifest)$/.test(url.pathname);
+    /\/(?:index\.html|app\.js|calc\.js|style\.css|manifest\.webmanifest)$/.test(url.pathname);
   event.respondWith(isCore?networkFirst(event.request):cacheFirst(event.request));
 });
