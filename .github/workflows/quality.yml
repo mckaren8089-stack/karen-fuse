@@ -8,10 +8,14 @@ on:
     branches-ignore: [main]
     paths:
       - "app.js"
+      - "calc.js"
       - "index.html"
       - "style.css"
       - "sw.js"
+      - "manifest.webmanifest"
       - "scripts/**"
+      - "docs/**"
+      - ".github/workflows/collect-prices.yml"
       - ".github/workflows/quality.yml"
 
 permissions:
@@ -20,7 +24,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -29,8 +33,22 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check app.js
+          node --check calc.js
           node --check sw.js
       - name: Check collector syntax
         run: python -m py_compile scripts/collect_prices.py
       - name: Run collector self-test
         run: python scripts/collect_prices.py --self-test
+      - name: Run calculator tests
+        run: node scripts/test_calc.js
+      - name: Validate UI contract
+        run: python scripts/test_ui_contract.py
+      - name: Probe XAU and TGJU historical sources
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        run: python scripts/collect_prices.py --probe
+      - name: Run collector integration
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        run: python scripts/collect_prices.py
+      - name: Validate generated data contract
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        run: python scripts/test_data_contract.py
