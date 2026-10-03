@@ -455,7 +455,6 @@
   function validateCalibration(ref,buy,sell,{interactive=false}={}){
     const plausible=v=>Number.isFinite(v)&&v>=1_000_000&&v<=100_000_000;
     if(!plausible(ref)||!plausible(buy)||!plausible(sell)) return 'اعداد واردشده خارج از محدودهٔ معتبر طلای ۱۸ عیار هستند.';
-    if(buy<sell) return 'قیمت خرید بلو نباید از قیمت فروش بلو کمتر باشد؛ جای دو عدد را بررسی کن.';
     const maxDeviation=Math.max(Math.abs(buy/ref-1),Math.abs(sell/ref-1))*100;
     if(maxDeviation>10) return 'اختلاف قیمت بلو با مرجع بیش از ۱۰٪ است؛ احتمال خطای ورود عدد زیاد است.';
     if(interactive && maxDeviation>3){
