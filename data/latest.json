@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-10-03T01:17:35Z",
+  "generated_at": "2026-10-03T01:21:16Z",
   "sources": {
     "alanchand": {
       "name": "الان چند",
@@ -9,7 +9,8 @@
       "usd_toman": 262575,
       "usd_buy_toman": 261250,
       "usd_sell_toman": 263900,
-      "updated_at": "2026-10-03T01:17:29Z",
+      "updated_at": "2026-10-03T01:21:14Z",
+      "source_updated_at": null,
       "error": null
     },
     "tgju": {
@@ -19,7 +20,8 @@
       "usd_toman": 258465,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03 04:47:24",
+      "updated_at": "2026-10-03T01:21:15Z",
+      "source_updated_at": "2026-10-03 04:51:05",
       "error": null
     },
     "estjt": {
@@ -29,7 +31,8 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T01:17:32Z",
+      "updated_at": "2026-10-03T01:21:16Z",
+      "source_updated_at": null,
       "error": null
     },
     "pashizi": {
@@ -39,7 +42,8 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T01:17:32Z",
+      "updated_at": "2026-10-03T01:21:14Z",
+      "source_updated_at": null,
       "error": "HTTPError: HTTP Error 403: Forbidden"
     },
     "zarscan": {
@@ -49,7 +53,8 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T01:17:33Z",
+      "updated_at": "2026-10-03T01:21:14Z",
+      "source_updated_at": null,
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "geram18": {
@@ -59,7 +64,8 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T01:17:34Z",
+      "updated_at": "2026-10-03T01:21:15Z",
+      "source_updated_at": null,
       "error": "قیمت قابل استفاده در صفحه عمومی پیدا نشد"
     },
     "navasan_widget": {
@@ -69,7 +75,8 @@
       "usd_toman": null,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
-      "updated_at": "2026-10-03T01:17:35Z",
+      "updated_at": "2026-10-03T01:21:15Z",
+      "source_updated_at": null,
       "error": "قیمت قابل استفاده در ویجت/صفحه عمومی پیدا نشد"
     }
   },
@@ -80,5 +87,17 @@
   "spread": {
     "gold_pct": 1.2163,
     "usd_pct": 1.5776
+  },
+  "quality": {
+    "gold": {
+      "level": "high",
+      "source_count": 3,
+      "spread_pct": 1.2163
+    },
+    "usd": {
+      "level": "medium",
+      "source_count": 2,
+      "spread_pct": 1.5776
+    }
   }
 }
