@@ -5,6 +5,7 @@ import re
 root = Path(__file__).resolve().parents[1]
 app = (root / "app.js").read_text("utf-8")
 html = (root / "index.html").read_text("utf-8")
+css = (root / "style.css").read_text("utf-8")
 
 m = re.search(r"const\s+ids\s*=\s*\[(.*?)\];", app, re.S)
 assert m, "app.js ids registry not found"
@@ -21,3 +22,6 @@ for value in ("1", "6", "24", "72", "168", "720", "2160", "8760"):
     assert f'data-hours="{value}"' in html, f"missing chart range {value}"
 
 print("ui-contract-test: ok")
+
+assert ".chart-empty[hidden]" in css, "hidden chart overlay must have an explicit CSS override"
+assert "asset-source-group" in app, "source rendering must be grouped by asset"
