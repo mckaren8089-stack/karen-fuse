@@ -1,5 +1,42 @@
-const CACHE='karen-fuse-v0.3.0';
+const CACHE='karen-fuse-v0.3.1';
 const ASSETS=['./','./index.html','./style.css','./app.js','./manifest.webmanifest','./icon.svg'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(u.origin!==location.origin)return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const cp=res.clone();caches.open(CACHE).then(c=>c.put(e.request,cp));return res}).catch(()=>caches.match('./index.html'))));});
+
+self.addEventListener('install',event=>{
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting()));
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+      .then(()=>self.clients.claim())
+  );
+});
+
+async function networkFirst(request){
+  const cache=await caches.open(CACHE);
+  try{
+    const response=await fetch(request,{cache:'no-store'});
+    if(response && response.ok) cache.put(request,response.clone());
+    return response;
+  }catch{
+    return (await cache.match(request)) || (await cache.match('./index.html'));
+  }
+}
+
+async function cacheFirst(request){
+  const cache=await caches.open(CACHE);
+  const cached=await cache.match(request);
+  if(cached) return cached;
+  const response=await fetch(request);
+  if(response && response.ok) cache.put(request,response.clone());
+  return response;
+}
+
+self.addEventListener('fetch',event=>{
+  const url=new URL(event.request.url);
+  if(url.origin!==location.origin || event.request.method!=='GET') return;
+  const isCore=event.request.mode==='navigate' ||
+    /\/(?:index\.html|app\.js|style\.css|manifest\.webmanifest)$/.test(url.pathname);
+  event.respondWith(isCore?networkFirst(event.request):cacheFirst(event.request));
+});
