@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.4.0';
+  const VERSION = '0.4.1';
   const STORE_KEY = 'karenFuse.v04';
   const LEGACY_KEYS = ['karenFuse.v03','karenFuse.v02'];
   const RAW_BASE = 'https://raw.githubusercontent.com/mckaren8089-stack/karen-fuse/main/data';
@@ -187,16 +187,12 @@
   }
 
   function basisModel(){
-    const arr=state.calibrations.map(calParts).filter(r=>validCalibrationValues(r.ref,r.buy,r.sell)).slice(-20);
-    if(!arr.length) return {buy:0,sell:0,count:0};
-    let wb=0,ws=0,sum=0;
-    arr.forEach((r,i)=>{
-      const w=Math.pow(i+1,1.35);
-      wb+=(r.buy/r.ref-1)*100*w;
-      ws+=(r.sell/r.ref-1)*100*w;
-      sum+=w;
+    if(!window.KarenCalc?.bluBasis) return {buy:0,sell:0,count:0,latestAt:null};
+    return window.KarenCalc.bluBasis(state.calibrations,{
+      windowHours:72,
+      maxSamples:8,
+      maxDeltaPct:2.5
     });
-    return {buy:wb/sum,sell:ws/sum,count:arr.length};
   }
 
   function estimates(){
@@ -372,24 +368,56 @@
 
   function renderSources(){
     const sources=latest?.sources||{};
-    const preferred=['alanchand','tgju','estjt','gold_api','tgju_xau','navasan_widget','pashizi','zarscan','geram18'];
+    const preferred=['alanchand','tgju','estjt','navasan_widget','gold_api','tgju_xau','pashizi','zarscan','geram18'];
     const keys=[...preferred.filter(k=>sources[k]),...Object.keys(sources).filter(k=>!preferred.includes(k))];
-    const active=keys.filter(k=>sources[k]?.status==='OK'||(!sources[k]?.status&&sources[k]?.ok));
+    const healthy=s=>s?.status==='OK'||(!s?.status&&s?.ok);
+
+    const specs=[
+      {
+        key:'gold',title:'طلای ۱۸ عیار',unit:'تومان / گرم',
+        rows:keys.filter(k=>healthy(sources[k]) && Number(sources[k]?.gold18_toman)>0).map(k=>{
+          const s=sources[k];
+          return {key:k,name:s.name||k,value:money(s.gold18_toman),detail:'مرجع طلا',time:s.collected_at||s.updated_at};
+        })
+      },
+      {
+        key:'usd',title:'دلار آزاد',unit:'تومان',
+        rows:keys.filter(k=>healthy(sources[k]) && (Number(sources[k]?.usd_toman)>0||Number(sources[k]?.usd_buy_toman)>0||Number(sources[k]?.usd_sell_toman)>0)).map(k=>{
+          const s=sources[k];
+          let detail='قیمت منبع';
+          if(Number(s.usd_buy_toman)>0&&Number(s.usd_sell_toman)>0){
+            detail='خرید '+money(s.usd_buy_toman)+' • فروش '+money(s.usd_sell_toman);
+          }
+          return {key:k,name:s.name||k,value:money(s.usd_toman||s.usd_sell_toman||s.usd_buy_toman),detail,time:s.collected_at||s.updated_at};
+        })
+      },
+      {
+        key:'xau',title:'اونس جهانی',unit:'XAU/USD',
+        rows:keys.filter(k=>healthy(sources[k]) && Number(sources[k]?.xau_usd)>0).map(k=>{
+          const s=sources[k];
+          return {key:k,name:s.name||k,value:xauMoney(s.xau_usd),detail:'اونس / دلار',time:s.collected_at||s.updated_at};
+        })
+      }
+    ];
+
+    els.sourceGrid.innerHTML=specs.map(group=>
+      '<section class="asset-source-group asset-source-'+group.key+'">'+
+        '<div class="asset-source-heading"><strong>'+group.title+'</strong><span>'+group.unit+'</span></div>'+
+        '<div class="asset-source-cards">'+
+          (group.rows.length?group.rows.map(row=>
+            '<article class="source-tile">'+
+              '<div class="source-name"><strong>'+escapeHtml(row.name)+'</strong><i class="live-dot"></i></div>'+
+              '<div class="source-quote">'+row.value+'</div>'+
+              '<div class="source-detail">'+row.detail+'</div>'+
+              '<div class="source-time">'+ageLabel(row.time)+' پیش</div>'+
+            '</article>'
+          ).join(''):'<div class="source-empty">منبع سالمی موجود نیست.</div>')+
+        '</div>'+
+      '</section>'
+    ).join('');
+
+    const active=keys.filter(k=>healthy(sources[k]));
     const unhealthy=keys.filter(k=>!active.includes(k));
-
-    els.sourceGrid.innerHTML=active.map(k=>{
-      const s=sources[k];
-      const values=[];
-      if(Number(s.gold18_toman)>0) values.push('<div><span>طلا ۱۸</span><b>'+money(s.gold18_toman)+'</b></div>');
-      if(Number(s.usd_toman)>0 || Number(s.usd_sell_toman)>0) values.push('<div><span>'+(s.usd_sell_toman?'دلار فروش':'دلار')+'</span><b>'+money(s.usd_sell_toman||s.usd_toman)+'</b></div>');
-      if(Number(s.xau_usd)>0) values.push('<div><span>XAU/USD</span><b>'+xauMoney(s.xau_usd)+'</b></div>');
-      return '<article class="source-tile">'+
-        '<div class="source-name"><strong>'+escapeHtml(s.name||k)+'</strong><i class="live-dot"></i></div>'+
-        '<div class="source-values">'+values.join('')+'</div>'+
-        '<div class="source-time">'+ageLabel(s.collected_at||s.updated_at)+' پیش</div>'+
-        '</article>';
-    }).join('') || '<div class="source-footer">هیچ منبع سالمی در این نوبت در دسترس نیست.</div>';
-
     const counts=latest?.source_counts||{};
     const failedNames=unhealthy.map(k=>{
       const s=sources[k];
@@ -644,6 +672,10 @@
     els.estBluSell.textContent=e.sell?money(e.sell):'—';
     els.basisBuyLabel.textContent=pct(b.buy);
     els.basisSellLabel.textContent=pct(b.sell);
+    if(b.latestAt){
+      els.estBluBuy.title='مبتنی بر آخرین نمونه معتبر Blu: '+dtf.format(new Date(b.latestAt));
+      els.estBluSell.title=els.estBluBuy.title;
+    }
     autoFillCalibrationReference();
     renderBluHistory();
     drawBasisChart();
@@ -712,9 +744,14 @@
     if(document.activeElement!==els.calcFee) els.calcFee.value=String(Number.isFinite(fee)?fee:0.5);
 
     const selected=selectedCalcPrice();
+    const b=basisModel();
+    const bluAge=b.latestAt?ageLabel(b.latestAt):'—';
+    const marketAge=ageLabel(snapshotTs());
     els.calcReferenceNote.textContent=selected.fallback
-      ? 'هنوز نمونه Blu کافی نیست؛ محاسبه فعلاً با اجماع بازار انجام می‌شود.'
-      : 'مرجع: '+selected.label+' • '+ageLabel(snapshotTs())+' پیش';
+      ? 'هنوز نمونه Blu معتبر نداریم؛ محاسبه فعلاً با اجماع بازار انجام می‌شود.'
+      : selected.label==='تخمین Blu'
+        ? 'مرجع: تخمین Blu • آخرین نمونه Blu '+bluAge+' پیش • Snapshot بازار '+marketAge+' پیش'
+        : 'مرجع: اجماع بازار • Snapshot '+marketAge+' پیش';
     els.calcReferenceNote.className='form-hint '+(selected.fallback?'warn':'');
 
     const inputType=c.lastInput==='gold'?'gold':'toman';
