@@ -25,3 +25,6 @@ print("ui-contract-test: ok")
 
 assert ".chart-empty[hidden]" in css, "hidden chart overlay must have an explicit CSS override"
 assert "asset-source-group" in app, "source rendering must be grouped by asset"
+
+assert "setLineDash([6,6])" in app, "intraday collection gaps must render as dashed bridges"
+assert "Mark every real observation" in app, "sparse chart windows must show real observation markers"
