@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '0.4.1';
+  const VERSION = '0.4.2';
   const STORE_KEY = 'karenFuse.v04';
   const LEGACY_KEYS = ['karenFuse.v03','karenFuse.v02'];
   const RAW_BASE = 'https://raw.githubusercontent.com/mckaren8089-stack/karen-fuse/main/data';
@@ -515,6 +515,8 @@
 
     const color=chartAsset==='gold'?'#f6c453':chartAsset==='usd'?'#6bb6ff':'#52d7e8';
     const gapLimit=mode==='intraday'?GAP_WARN_MS:Infinity;
+
+    // Draw only measured continuity as a solid line.
     ctx.beginPath();
     arr.forEach((p,i)=>{
       const px=x(p.ts),py=y(p.v);
@@ -523,8 +525,33 @@
     });
     ctx.strokeStyle=color;ctx.lineWidth=2.4;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
 
+    // Bridge missing collection windows with a clearly dashed, lower-opacity segment.
+    // This preserves the visual trend between known observations without pretending
+    // that intermediate prices were actually collected.
+    if(mode==='intraday'){
+      ctx.save();
+      ctx.setLineDash([6,6]);
+      ctx.strokeStyle='rgba(246,196,83,.42)';
+      ctx.lineWidth=1.4;
+      for(let i=1;i<arr.length;i++){
+        if((arr[i].ts-arr[i-1].ts)<=gapLimit) continue;
+        ctx.beginPath();
+        ctx.moveTo(x(arr[i-1].ts),y(arr[i-1].v));
+        ctx.lineTo(x(arr[i].ts),y(arr[i].v));
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Mark every real observation so sparse windows are still readable.
+    arr.forEach((p,i)=>{
+      ctx.beginPath();
+      ctx.arc(x(p.ts),y(p.v),i===arr.length-1?4:2.4,0,Math.PI*2);
+      ctx.fillStyle=color;
+      ctx.fill();
+    });
+
     const last=arr[arr.length-1];
-    ctx.beginPath();ctx.arc(x(last.ts),y(last.v),4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
 
     ctx.fillStyle='rgba(190,207,223,.72)';ctx.font='10px Tahoma';ctx.textAlign='left';
     const displayValue=v=>chartAsset==='xau'?xauMoney(v):money(v);
@@ -539,12 +566,20 @@
     els.rangeCoverage.textContent=formatCoverage((arr[arr.length-1].ts-arr[0].ts)/3600e3);
     els.chartLastPoint.textContent=mode==='daily'?dtf.format(new Date(last.ts)):ageLabel(last.ts)+' پیش';
 
-    let largestGap=0;
-    for(let i=1;i<arr.length;i++) largestGap=Math.max(largestGap,arr[i].ts-arr[i-1].ts);
+    let largestGap=0,gapCount=0;
+    for(let i=1;i<arr.length;i++){
+      const gap=arr[i].ts-arr[i-1].ts;
+      largestGap=Math.max(largestGap,gap);
+      if(mode==='intraday' && gap>GAP_WARN_MS) gapCount++;
+    }
     const tailGap=end-last.ts;
     if(mode==='intraday' && (tailGap>GAP_WARN_MS || largestGap>GAP_WARN_MS)){
       const g=Math.max(tailGap,largestGap);
-      els.chartGap.textContent='شکاف '+formatCoverage(g/3600e3);
+      const parts=[];
+      if(gapCount) parts.push(nf.format(gapCount)+' شکاف بین نقاط');
+      if(tailGap>GAP_WARN_MS) parts.push('آخرین داده '+formatCoverage(tailGap/3600e3)+' قبل');
+      parts.push('بزرگ‌ترین '+formatCoverage(g/3600e3));
+      els.chartGap.textContent=parts.join(' • ');
       els.chartGap.className='warn';
     }else{
       els.chartGap.textContent=mode==='daily'?'کندل روزانه':'بدون شکاف بزرگ';
