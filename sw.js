@@ -1,4 +1,4 @@
-const CACHE='karen-fuse-v0.4.1';
+const CACHE='karen-fuse-v0.4.2';
 const ASSETS=['./','./index.html','./style.css','./calc.js','./app.js','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>{
