@@ -8,7 +8,7 @@ on:
       - "scripts/collect_prices.py"
       - ".github/workflows/collect-prices.yml"
   schedule:
-    - cron: "2-57/5 * * * *"
+    - cron: "*/5 * * * *"
 
 permissions:
   contents: write
