@@ -7,11 +7,13 @@ on:
     paths:
       - "scripts/collect_prices.py"
       - ".github/workflows/collect-prices.yml"
+  # Recovery only. The primary cadence is maintained by the self-dispatch chain.
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "23 * * * *"
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: market-data
@@ -20,30 +22,68 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Self-test collector
         run: python scripts/collect_prices.py --self-test
-      - name: Sync latest main before collection
+
+      - name: Collect market snapshots for two hours
+        shell: bash
         run: |
-          git fetch origin main
-          git reset --hard origin/main
-      - name: Collect prices
-        run: python scripts/collect_prices.py
-      - name: Commit market data
-        run: |
+          set -euo pipefail
+
           git config user.name "karen-fuse-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/latest.json data/history.json
-          if [ -f data/consensus_history.json ]; then git add data/consensus_history.json; fi
-          if [ -f data/tgju_history.json ]; then git add data/tgju_history.json; fi
-          if git diff --cached --quiet; then
-            echo "No data changes"
-            exit 0
-          fi
-          git commit -m "data: update market snapshot"
-          git push
+
+          for iteration in $(seq 1 24); do
+            cycle_started=$(date +%s)
+            echo "Snapshot cycle ${iteration}/24"
+
+            # Always collect from the newest main so product changes are not overwritten.
+            git fetch origin main
+            git reset --hard origin/main
+
+            python scripts/collect_prices.py
+
+            git add data/latest.json data/history.json
+            if [ -f data/consensus_history.json ]; then git add data/consensus_history.json; fi
+            if [ -f data/tgju_history.json ]; then git add data/tgju_history.json; fi
+
+            if git diff --cached --quiet; then
+              echo "No data changes"
+            else
+              git commit -m "data: update market snapshot"
+              git push origin HEAD:main
+            fi
+
+            if [ "${iteration}" -lt 24 ]; then
+              elapsed=$(( $(date +%s) - cycle_started ))
+              sleep_for=$(( 300 - elapsed ))
+              if [ "${sleep_for}" -gt 0 ]; then
+                echo "Next snapshot in ${sleep_for}s"
+                sleep "${sleep_for}"
+              else
+                echo "Cycle exceeded 300s; continuing immediately"
+              fi
+            fi
+          done
+
+      - name: Start the next collector run
+        if: ${{ always() && !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/collect-prices.yml/dispatches" \
+            --data '{"ref":"main"}'
