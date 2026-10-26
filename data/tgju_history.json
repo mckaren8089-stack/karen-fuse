@@ -1,7 +1,7 @@
 {
   "version": 1,
   "provider": "TGJU",
-  "fetched_at": "2026-10-26T00:53:33Z",
+  "fetched_at": "2026-10-26T06:55:12Z",
   "series": {
     "gold": [
       {
@@ -13510,5 +13510,7 @@
       }
     ]
   },
-  "errors": {}
+  "errors": {
+    "gold": "HTTPError: HTTP Error 502: Bad Gateway"
+  }
 }
