@@ -1,18 +1,18 @@
 {
   "version": 2,
-  "snapshot_ts": "2026-10-26T18:12:19Z",
-  "generated_at": "2026-10-26T18:12:19Z",
+  "snapshot_ts": "2026-10-26T18:17:26Z",
+  "generated_at": "2026-10-26T18:17:26Z",
   "sources": {
     "alanchand": {
       "source_key": "alanchand",
       "name": "الان چند",
-      "collected_at": "2026-10-26T18:12:17Z",
-      "updated_at": "2026-10-26T18:12:17Z",
+      "collected_at": "2026-10-26T18:17:18Z",
+      "updated_at": "2026-10-26T18:17:18Z",
       "source_updated_at": null,
       "status": "OK",
       "ok": true,
       "error": null,
-      "gold18_toman": 26310080,
+      "gold18_toman": 26312390,
       "gold18_status": "OK",
       "gold18_source_updated_at": null,
       "gold18_error": null,
@@ -30,21 +30,21 @@
     "tgju": {
       "source_key": "tgju",
       "name": "TGJU",
-      "collected_at": "2026-10-26T18:12:18Z",
-      "updated_at": "2026-10-26T18:12:18Z",
-      "source_updated_at": "2026-10-26 21:40:37",
+      "collected_at": "2026-10-26T18:17:19Z",
+      "updated_at": "2026-10-26T18:17:19Z",
+      "source_updated_at": "2026-10-26 21:24:52",
       "status": "OK",
       "ok": true,
       "error": null,
       "gold18_toman": 26363600,
       "gold18_status": "OK",
-      "gold18_source_updated_at": "2026-10-26 21:39:49",
+      "gold18_source_updated_at": "2026-10-26 21:24:52",
       "gold18_error": null,
       "usd_toman": 271500,
       "usd_buy_toman": null,
       "usd_sell_toman": null,
       "usd_status": "OK",
-      "usd_source_updated_at": "2026-10-26 21:40:37",
+      "usd_source_updated_at": "2026-10-26 21:24:06",
       "usd_error": null,
       "xau_usd": null,
       "xau_status": "MISSING",
@@ -54,8 +54,8 @@
     "estjt": {
       "source_key": "estjt",
       "name": "اتحادیه طلا تهران",
-      "collected_at": "2026-10-26T18:12:19Z",
-      "updated_at": "2026-10-26T18:12:19Z",
+      "collected_at": "2026-10-26T18:17:20Z",
+      "updated_at": "2026-10-26T18:17:20Z",
       "source_updated_at": null,
       "status": "OK",
       "ok": true,
@@ -78,8 +78,8 @@
     "pashizi": {
       "source_key": "pashizi",
       "name": "پشیزی",
-      "collected_at": "2026-10-26T18:12:16Z",
-      "updated_at": "2026-10-26T18:12:16Z",
+      "collected_at": "2026-10-26T18:17:17Z",
+      "updated_at": "2026-10-26T18:17:17Z",
       "source_updated_at": null,
       "status": "ERROR",
       "ok": false,
@@ -102,8 +102,8 @@
     "zarscan": {
       "source_key": "zarscan",
       "name": "زر اسکن",
-      "collected_at": "2026-10-26T18:12:16Z",
-      "updated_at": "2026-10-26T18:12:16Z",
+      "collected_at": "2026-10-26T18:17:17Z",
+      "updated_at": "2026-10-26T18:17:17Z",
       "source_updated_at": null,
       "status": "MISSING",
       "ok": false,
@@ -126,8 +126,8 @@
     "geram18": {
       "source_key": "geram18",
       "name": "گرم ۱۸",
-      "collected_at": "2026-10-26T18:12:17Z",
-      "updated_at": "2026-10-26T18:12:17Z",
+      "collected_at": "2026-10-26T18:17:26Z",
+      "updated_at": "2026-10-26T18:17:26Z",
       "source_updated_at": null,
       "status": "MISSING",
       "ok": false,
@@ -150,8 +150,8 @@
     "navasan_widget": {
       "source_key": "navasan_widget",
       "name": "نوسان",
-      "collected_at": "2026-10-26T18:12:17Z",
-      "updated_at": "2026-10-26T18:12:17Z",
+      "collected_at": "2026-10-26T18:17:18Z",
+      "updated_at": "2026-10-26T18:17:18Z",
       "source_updated_at": null,
       "status": "OK",
       "ok": true,
@@ -174,9 +174,9 @@
     "gold_api": {
       "source_key": "gold_api",
       "name": "Gold API",
-      "collected_at": "2026-10-26T18:12:16Z",
-      "updated_at": "2026-10-26T18:12:16Z",
-      "source_updated_at": "2026-10-26T18:12:15Z",
+      "collected_at": "2026-10-26T18:17:18Z",
+      "updated_at": "2026-10-26T18:17:18Z",
+      "source_updated_at": "2026-10-26T18:17:15Z",
       "status": "OK",
       "ok": true,
       "error": null,
@@ -190,17 +190,17 @@
       "usd_status": "MISSING",
       "usd_source_updated_at": null,
       "usd_error": null,
-      "xau_usd": 4021.3,
+      "xau_usd": 4021.4,
       "xau_status": "OK",
-      "xau_source_updated_at": "2026-10-26T18:12:15Z",
+      "xau_source_updated_at": "2026-10-26T18:17:15Z",
       "xau_error": null
     },
     "tgju_xau": {
       "source_key": "tgju_xau",
       "name": "TGJU اونس",
-      "collected_at": "2026-10-26T18:12:17Z",
-      "updated_at": "2026-10-26T18:12:17Z",
-      "source_updated_at": "2026-10-26 21:41:44",
+      "collected_at": "2026-10-26T18:17:18Z",
+      "updated_at": "2026-10-26T18:17:18Z",
+      "source_updated_at": "2026-10-26 21:24:52",
       "status": "OK",
       "ok": true,
       "error": null,
@@ -214,16 +214,16 @@
       "usd_status": "MISSING",
       "usd_source_updated_at": null,
       "usd_error": null,
-      "xau_usd": 4020.81,
+      "xau_usd": 4017.94,
       "xau_status": "OK",
-      "xau_source_updated_at": "2026-10-26 21:41:44",
+      "xau_source_updated_at": "2026-10-26 21:24:52",
       "xau_error": null
     }
   },
   "consensus": {
-    "gold18_toman": 26310080.0,
+    "gold18_toman": 26311235.0,
     "usd_toman": 271500.0,
-    "xau_usd": 4021.06
+    "xau_usd": 4019.67
   },
   "source_counts": {
     "gold": 4,
@@ -234,15 +234,15 @@
   "usd_source_count": 3,
   "xau_source_count": 2,
   "spread": {
-    "gold_pct": 0.9316,
+    "gold_pct": 0.9315,
     "usd_pct": 0.2394,
-    "xau_pct": 0.0122
+    "xau_pct": 0.0861
   },
   "quality": {
     "gold": {
       "level": "high",
       "source_count": 4,
-      "spread_pct": 0.9316
+      "spread_pct": 0.9315
     },
     "usd": {
       "level": "high",
@@ -252,7 +252,7 @@
     "xau": {
       "level": "medium",
       "source_count": 2,
-      "spread_pct": 0.0122
+      "spread_pct": 0.0861
     }
   }
 }
