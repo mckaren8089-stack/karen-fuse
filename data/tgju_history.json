@@ -1,7 +1,7 @@
 {
   "version": 1,
   "provider": "TGJU",
-  "fetched_at": "2026-10-29T01:06:12Z",
+  "fetched_at": "2026-10-29T07:06:56Z",
   "series": {
     "gold": [
       {
@@ -13510,5 +13510,7 @@
       }
     ]
   },
-  "errors": {}
+  "errors": {
+    "gold": "HTTPError: HTTP Error 500: Internal Server Error"
+  }
 }
