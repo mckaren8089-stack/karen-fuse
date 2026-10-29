@@ -1,11 +1,17 @@
 # کارن فیوز | Karen Fuse
 
-**اجرای آنلاین برنامه:** https://mckaren8089-stack.github.io/karen-fuse/
+**اجرای مستقیم / Launch:** https://mckaren8089-stack.github.io/karen-fuse/
 
 **زبان / Language:** [فارسی](README.fa.md) | [English](README.en.md)
 
-**English summary:** Gold and currency market monitoring, charts, and estimates.
+ابزار فارسی مشاهده قیمت‌های طلا و ارز، نمودارهای تاریخی و محاسبه تخمینی خرید و فروش.
 
-**جزئیات / Full details:** [فارسی](README.fa.md) | [English](README.en.md)
+A Persian-language gold and currency market monitor with historical charts and trade estimates.
 
-**حقوق / Rights:** [All rights reserved / تمامی حقوق محفوظ است](LICENSE).
+**امکانات فعلی:** مقایسه منابع قیمت · نمودار تعاملی · محاسبه خرید و فروش · PWA
+
+**در برنامه:** پایداری جمع‌آوری داده‌ها و بهبود نمودارها و محاسبات
+
+**جزئیات:** [معرفی فارسی](README.fa.md) | [English overview](README.en.md)
+
+**حقوق کد:** [تمامی حقوق محفوظ است](LICENSE).
