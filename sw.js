@@ -8,7 +8,9 @@ self.addEventListener('install',event=>{
 self.addEventListener('activate',event=>{
   event.waitUntil(
     caches.keys()
-      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+      .then(keys=>Promise.all(// Cache Storage is shared by all PWAs on this github.io origin.
+      // Only remove obsolete Karen Fuse caches, never caches of other apps.
+      keys.filter(key=>key.startsWith('karen-fuse-') && key!==CACHE).map(key=>caches.delete(key))))
       .then(()=>self.clients.claim())
   );
 });
