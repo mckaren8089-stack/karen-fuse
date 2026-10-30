@@ -17,19 +17,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verify:
+    name: Verify application before deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check calc.js
+          node --check sw.js
+      - name: Check collector syntax
+        run: python -m py_compile scripts/collect_prices.py
+      - name: Self-test collector
+        run: python scripts/collect_prices.py --self-test
+      - name: Calculator tests
+        run: node scripts/test_calc.js
+      - name: UI contract
+        run: python scripts/test_ui_contract.py
+
   deploy:
+    needs: verify
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Check JavaScript syntax
-        run: node --check app.js
+      - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
         with:
           enablement: true
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: .
       - name: Deploy to GitHub Pages
