@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+  # Run on direct main commits as well; data-only commits stay excluded by paths.
   push:
-    branches-ignore: [main]
     paths:
       - "app.js"
       - "calc.js"
@@ -17,6 +17,7 @@ on:
       - "docs/**"
       - ".github/workflows/collect-prices.yml"
       - ".github/workflows/quality.yml"
+      - ".github/workflows/pages.yml"
 
 permissions:
   contents: read
@@ -26,8 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Check JavaScript syntax
