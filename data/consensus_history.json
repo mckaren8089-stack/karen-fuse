@@ -56418,6 +56418,39 @@
           "spread_pct": 0.0427
         }
       }
+    },
+    {
+      "ts": "2026-11-05T09:07:08Z",
+      "gold18_toman": 26108880.0,
+      "usd_toman": 265275.0,
+      "xau_usd": 4128.41,
+      "source_counts": {
+        "gold": 4,
+        "usd": 3,
+        "xau": 2
+      },
+      "spread": {
+        "gold_pct": 0.1412,
+        "usd_pct": 0.1979,
+        "xau_pct": 0.0964
+      },
+      "quality": {
+        "gold": {
+          "level": "high",
+          "source_count": 4,
+          "spread_pct": 0.1412
+        },
+        "usd": {
+          "level": "high",
+          "source_count": 3,
+          "spread_pct": 0.1979
+        },
+        "xau": {
+          "level": "medium",
+          "source_count": 2,
+          "spread_pct": 0.0964
+        }
+      }
     }
   ]
 }
